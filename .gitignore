@@ -1,0 +1,46 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Logs
+*.log
+backend.log
+build_output.txt
+build_errors.log
+test_notice.txt
+
+# Env / secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+ai-service/models/*.joblib
+
+# Node
+node_modules/
+timelysyncc-frontend/build/
+timelysyncc-frontend/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Java / Maven
+timelysync-backend/**/target/
+timelysync-backend/**/.mvn/wrapper/maven-wrapper.jar
+**/uploads/
+
+# Misc
+*.pem
+*.key
