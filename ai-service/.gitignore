@@ -5,5 +5,6 @@ venv/
 .env
 .env.*
 !.env.example
-models/*.joblib
+# Models are committed so Render free builds stay fast
+# models/*.joblib
 .pytest_cache/
