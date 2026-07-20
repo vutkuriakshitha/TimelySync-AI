@@ -53,8 +53,7 @@ services:
   - type: web
     name: timelysync-web
     runtime: static
-    rootDir: timelysyncc-frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: cd timelysyncc-frontend && npm ci && npm run build
     staticPublishPath: timelysyncc-frontend/build
     routes:
       - type: rewrite
