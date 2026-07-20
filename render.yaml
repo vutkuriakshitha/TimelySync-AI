@@ -1,12 +1,7 @@
 # Free-tier Git deploy for TimelySync (MongoDB Atlas + Render)
-# Connect this repo in Render → New → Blueprint → apply this file.
+# New → Blueprint → select TimelySync-AI
 #
-# After first deploy, set MONGODB_URI on api + ai (see instructions).
-# Service public URLs will be:
-#   https://timelysync-web.onrender.com
-#   https://timelysync-api.onrender.com
-#   https://timelysync-ai.onrender.com
-# (If a name is taken, Render adds a suffix — update env vars to match.)
+# You will be prompted once for MONGODB_URI (paste the Atlas URI on api + ai).
 
 services:
   - type: web
@@ -15,8 +10,8 @@ services:
     plan: free
     region: oregon
     rootDir: ai-service
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./ai-service/Dockerfile
+    dockerContext: ./ai-service
     healthCheckPath: /health
     envVars:
       - key: MONGODB_URI
@@ -34,8 +29,8 @@ services:
     plan: free
     region: oregon
     rootDir: timelysync-backend/timelysync-backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./timelysync-backend/timelysync-backend/Dockerfile
+    dockerContext: ./timelysync-backend/timelysync-backend
     healthCheckPath: /actuator/health
     envVars:
       - key: MONGODB_URI
@@ -60,14 +55,13 @@ services:
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "100"
 
+  # Static sites: no region / no plan fields (always free + global CDN)
   - type: web
     name: timelysync-web
     runtime: static
-    plan: free
-    region: oregon
     rootDir: timelysyncc-frontend
     buildCommand: npm ci && npm run build
-    staticPublishPath: build
+    staticPublishPath: ./timelysyncc-frontend/build
     routes:
       - type: rewrite
         source: /*
