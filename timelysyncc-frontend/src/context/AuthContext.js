@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await authService.login(email, password);
+      const response = await authService.login(email.trim().toLowerCase(), password);
       const { token, user: userData } = response.data;
 
       localStorage.setItem("token", token);
@@ -73,13 +73,18 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
 
       toast.success(`Welcome back, ${userData.name}!`);
-      await loadAvailableAccounts();
       navigate("/dashboard");
+      loadAvailableAccounts();
 
       return { success: true };
     } catch (error) {
       const message =
-        error.response?.data?.message || "Login failed. Please try again.";
+        error.response?.data?.message ||
+        (error.code === "ECONNABORTED"
+          ? "Server took too long to respond. Please try again."
+          : error.message?.includes("Network")
+            ? "Cannot reach the server. Is the backend running?"
+            : "Login failed. Please try again.");
       toast.error(message);
       return { success: false, error: message };
     }
@@ -87,7 +92,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const response = await authService.register(name, email, password);
+      const response = await authService.register(name, email.trim().toLowerCase(), password);
       const { token, user: userData } = response.data;
 
       localStorage.setItem("token", token);
@@ -95,14 +100,18 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
 
       toast.success(`Welcome to TimelySync, ${userData.name}!`);
-      await loadAvailableAccounts();
       navigate("/dashboard");
+      loadAvailableAccounts();
 
       return { success: true };
     } catch (error) {
       const message =
         error.response?.data?.message ||
-        "Registration failed. Please try again.";
+        (error.code === "ECONNABORTED"
+          ? "Server took too long to respond. Please try again."
+          : error.message?.includes("Network")
+            ? "Cannot reach the server. Is the backend running?"
+            : "Registration failed. Please try again.");
       toast.error(message);
       return { success: false, error: message };
     }
