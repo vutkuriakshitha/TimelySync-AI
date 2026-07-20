@@ -1,7 +1,4 @@
 # Free-tier Git deploy for TimelySync (MongoDB Atlas + Render)
-# New → Blueprint → select TimelySync-AI
-#
-# You will be prompted once for MONGODB_URI (paste the Atlas URI on api + ai).
 
 services:
   - type: web
@@ -9,7 +6,6 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    rootDir: ai-service
     dockerfilePath: ./ai-service/Dockerfile
     dockerContext: ./ai-service
     healthCheckPath: /health
@@ -28,7 +24,6 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    rootDir: timelysync-backend/timelysync-backend
     dockerfilePath: ./timelysync-backend/timelysync-backend/Dockerfile
     dockerContext: ./timelysync-backend/timelysync-backend
     healthCheckPath: /actuator/health
@@ -55,13 +50,12 @@ services:
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "100"
 
-  # Static sites: no region / no plan fields (always free + global CDN)
   - type: web
     name: timelysync-web
     runtime: static
     rootDir: timelysyncc-frontend
     buildCommand: npm ci && npm run build
-    staticPublishPath: ./timelysyncc-frontend/build
+    staticPublishPath: timelysyncc-frontend/build
     routes:
       - type: rewrite
         source: /*
