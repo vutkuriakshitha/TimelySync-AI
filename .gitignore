@@ -27,7 +27,8 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
-ai-service/models/*.joblib
+# Keep trained models in git so free Render builds skip heavy training
+# ai-service/models/*.joblib
 
 # Node
 node_modules/
