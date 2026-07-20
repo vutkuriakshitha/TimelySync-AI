@@ -67,6 +67,13 @@ const ResetPassword = () => {
               </Alert>
             )}
 
+            {!token && !success && (
+              <Alert variant="warning" className="py-2 small">
+                This reset link is missing a token. Request a new one from{" "}
+                <Link to="/forgot-password">Forgot password</Link>.
+              </Alert>
+            )}
+
             {success ? (
               <Alert variant="success">
                 Password reset successfully. Redirecting you to sign in...

@@ -1,0 +1,77 @@
+# Free-tier Git deploy for TimelySync (MongoDB Atlas + Render)
+# Connect this repo in Render → New → Blueprint → apply this file.
+#
+# After first deploy, set MONGODB_URI on api + ai (see instructions).
+# Service public URLs will be:
+#   https://timelysync-web.onrender.com
+#   https://timelysync-api.onrender.com
+#   https://timelysync-ai.onrender.com
+# (If a name is taken, Render adds a suffix — update env vars to match.)
+
+services:
+  - type: web
+    name: timelysync-ai
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: ai-service
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: AI_INTERNAL_API_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://timelysync-web.onrender.com,https://timelysync-api.onrender.com
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: web
+    name: timelysync-api
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: timelysync-backend/timelysync-backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_INTERNAL_API_KEY
+        fromService:
+          name: timelysync-ai
+          type: web
+          envVarKey: AI_INTERNAL_API_KEY
+      - key: AI_SERVICE_URL
+        value: https://timelysync-ai.onrender.com
+      - key: FRONTEND_URL
+        value: https://timelysync-web.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://timelysync-web.onrender.com
+      - key: MAIL_ENABLED
+        value: "false"
+      - key: ALLOW_IN_APP_RESET_FALLBACK
+        value: "true"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+
+  - type: web
+    name: timelysync-web
+    runtime: static
+    plan: free
+    region: oregon
+    rootDir: timelysyncc-frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://timelysync-api.onrender.com/api

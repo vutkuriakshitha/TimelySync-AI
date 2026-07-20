@@ -20,6 +20,7 @@ import com.timelysync.payload.request.LoginRequest;
 import com.timelysync.payload.request.ResetPasswordRequest;
 import com.timelysync.payload.request.SignupRequest;
 import com.timelysync.payload.request.UpdateProfileRequest;
+import com.timelysync.payload.response.ForgotPasswordResponse;
 import com.timelysync.payload.response.JwtResponse;
 import com.timelysync.payload.response.MessageResponse;
 import com.timelysync.payload.response.UserDto;
@@ -75,10 +76,8 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        authService.requestPasswordReset(request.getEmail());
-        return ResponseEntity.ok(new MessageResponse(
-                "If an account exists with that email, a password reset link has been sent."));
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.requestPasswordReset(request.getEmail()));
     }
 
     @PostMapping("/reset-password")

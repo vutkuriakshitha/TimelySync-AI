@@ -1,7 +1,7 @@
 // src/pages/Signup.jsx
 import React, { useState, useContext } from "react";
 import { Link } from "react-router-dom";
-import { Container, Card, Form, Button, Alert } from "react-bootstrap";
+import { Container, Card, Form, Button, Alert, Spinner } from "react-bootstrap";
 import { UserPlus, User, Mail, Lock } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -16,24 +16,40 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setError("");
 
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName) {
+      setError("Please enter your full name");
+      return;
+    }
+    if (!trimmedEmail) {
+      setError("Please enter your email");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
-
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
       return;
     }
 
     setLoading(true);
-    const result = await register(name, email, password);
-    if (!result.success) {
-      setError(result.error);
+    try {
+      const result = await register(trimmedName, trimmedEmail, password);
+      if (!result?.success) {
+        setError(result?.error || "Registration failed. Please try again.");
+      }
+    } catch (err) {
+      setError("Could not reach the server. Make sure the backend is running.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -56,8 +72,8 @@ const Signup = () => {
 
             {error && <Alert variant="danger">{error}</Alert>}
 
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
+            <Form onSubmit={handleSubmit} noValidate>
+              <Form.Group className="mb-3" controlId="signupName">
                 <Form.Label>Full Name</Form.Label>
                 <div className="position-relative">
                   <User
@@ -70,12 +86,14 @@ const Signup = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="ps-5 py-2"
+                    autoComplete="name"
                     required
+                    disabled={loading}
                   />
                 </div>
               </Form.Group>
 
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" controlId="signupEmail">
                 <Form.Label>Email Address</Form.Label>
                 <div className="position-relative">
                   <Mail
@@ -88,12 +106,14 @@ const Signup = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="ps-5 py-2"
+                    autoComplete="email"
                     required
+                    disabled={loading}
                   />
                 </div>
               </Form.Group>
 
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" controlId="signupPassword">
                 <Form.Label>Password</Form.Label>
                 <div className="position-relative">
                   <Lock
@@ -106,12 +126,14 @@ const Signup = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="ps-5 py-2"
+                    autoComplete="new-password"
                     required
+                    disabled={loading}
                   />
                 </div>
               </Form.Group>
 
-              <Form.Group className="mb-4">
+              <Form.Group className="mb-4" controlId="signupConfirmPassword">
                 <Form.Label>Confirm Password</Form.Label>
                 <div className="position-relative">
                   <Lock
@@ -124,7 +146,9 @@ const Signup = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="ps-5 py-2"
+                    autoComplete="new-password"
                     required
+                    disabled={loading}
                   />
                 </div>
               </Form.Group>
@@ -132,17 +156,23 @@ const Signup = () => {
               <Button
                 type="submit"
                 variant="success"
-                className="w-100 py-2 fw-semibold"
+                className="w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
                 disabled={loading}
               >
-                {loading ? "Creating Account..." : "Sign Up"}
+                {loading ? (
+                  <>
+                    <Spinner size="sm" animation="border" /> Creating Account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </Button>
             </Form>
 
             <div className="text-center mt-4">
-              <p className="text-muted">
+              <p className="text-muted mb-0">
                 Already have an account?{" "}
-                <Link to="/login" className="text-success text-decoration-none">
+                <Link to="/login" className="text-success text-decoration-none fw-semibold">
                   Sign in
                 </Link>
               </p>

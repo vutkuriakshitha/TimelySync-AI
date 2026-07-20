@@ -10,13 +10,23 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [resetLink, setResetLink] = useState("");
+  const [emailDelivered, setEmailDelivered] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await authService.forgotPassword(email);
+      const response = await authService.forgotPassword(email.trim().toLowerCase());
+      const data = response.data || {};
+      setMessage(
+        data.message ||
+          "If an account exists with that email, a password reset link has been sent. Check your inbox and spam folder.",
+      );
+      setResetLink(data.resetLink || "");
+      setEmailDelivered(Boolean(data.emailDelivered));
       setSubmitted(true);
     } catch (err) {
       setError(
@@ -38,7 +48,7 @@ const ForgotPassword = () => {
               </div>
               <h2 className="fw-bold">Forgot Password</h2>
               <p className="text-muted">
-                Enter your email and we'll send you a reset link
+                Enter your email and we&apos;ll send a reset link to your inbox
               </p>
             </div>
 
@@ -49,13 +59,39 @@ const ForgotPassword = () => {
             )}
 
             {submitted ? (
-              <Alert variant="success">
-                If an account exists with that email, a password reset link has
-                been sent. Please check your inbox.
-              </Alert>
+              <>
+                <Alert variant={resetLink ? "warning" : "success"}>
+                  {message}
+                  {!resetLink && (
+                    <div className="mt-2 small">
+                      {emailDelivered
+                        ? "Didn't get it? Check spam/junk, wait a minute, then try again."
+                        : "If an account exists, check your inbox and spam folder."}
+                    </div>
+                  )}
+                </Alert>
+                {resetLink && (
+                  <div className="d-grid gap-2">
+                    <Button
+                      as="a"
+                      href={resetLink}
+                      variant="primary"
+                      className="fw-semibold"
+                    >
+                      Continue to reset password
+                    </Button>
+                    <p className="small text-muted mb-0 text-break">
+                      Or copy this link:{" "}
+                      <a href={resetLink} className="text-break">
+                        {resetLink}
+                      </a>
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-4" controlId="email">
+              <Form onSubmit={handleSubmit} noValidate>
+                <Form.Group className="mb-4" controlId="forgotEmail">
                   <Form.Label>Email Address</Form.Label>
                   <div className="position-relative">
                     <Mail
@@ -68,7 +104,9 @@ const ForgotPassword = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="ps-5 py-2"
+                      autoComplete="email"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </Form.Group>
@@ -81,10 +119,10 @@ const ForgotPassword = () => {
                 >
                   {loading ? (
                     <>
-                      <Spinner size="sm" animation="border" /> Sending...
+                      <Spinner size="sm" animation="border" /> Sending email...
                     </>
                   ) : (
-                    "Send Reset Link"
+                    "Send Reset Email"
                   )}
                 </Button>
               </Form>

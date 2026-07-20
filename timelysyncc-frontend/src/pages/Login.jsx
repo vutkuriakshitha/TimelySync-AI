@@ -18,12 +18,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(email.trim().toLowerCase(), password);
       if (!result.success) {
         setError(result.error);
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+      setError("Could not reach the server. Make sure the backend is running.");
     } finally {
       setLoading(false);
     }

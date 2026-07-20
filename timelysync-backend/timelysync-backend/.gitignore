@@ -38,6 +38,7 @@ build/
 !.env.example
 application-local.properties
 application-secrets.properties
+**/application-secrets.properties
 *.pem
 *.key
 
