@@ -28,9 +28,12 @@ public class WebConfig implements WebMvcConfigurer {
         // by default has been observed to occasionally drop the request body
         // on POST requests to some ASGI servers (e.g. uvicorn) - using the
         // well-established Simple factory avoids that class of bug.
+        //
+        // Read timeout must be high: document OCR (pdf2image + tesseract) on
+        // Render free instances commonly takes 30–120s, not a few seconds.
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3000);
-        factory.setReadTimeout(8000);
+        factory.setConnectTimeout(15000);
+        factory.setReadTimeout(180000);
         factory.setBufferRequestBody(true);
         return builder.requestFactory(() -> factory).build();
     }
