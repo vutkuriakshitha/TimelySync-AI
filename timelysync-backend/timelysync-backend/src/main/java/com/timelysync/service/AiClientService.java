@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -224,10 +225,25 @@ public class AiClientService {
             history.setModelVersion((String) response.getOrDefault("modelVersion", "unknown"));
             predictionHistoryRepository.save(history);
             return response;
+        } catch (HttpStatusCodeException ex) {
+            String detail = ex.getResponseBodyAsString();
+            logger.warn("AI document extraction rejected ({}): {}", ex.getStatusCode(), detail);
+            String message = "Could not process this document right now. Ensure it is a readable PDF or image.";
+            if (detail != null && detail.contains("\"detail\"")) {
+                // FastAPI: {"detail":"..."}
+                int start = detail.indexOf("\"detail\"");
+                int colon = detail.indexOf(':', start);
+                int q1 = detail.indexOf('"', colon + 1);
+                int q2 = detail.indexOf('"', q1 + 1);
+                if (q1 > 0 && q2 > q1) {
+                    message = detail.substring(q1 + 1, q2);
+                }
+            }
+            throw new com.timelysync.exception.BadRequestException(message);
         } catch (RestClientException ex) {
             logger.warn("AI service unavailable for document deadline extraction: {}", ex.getMessage());
             throw new com.timelysync.exception.BadRequestException(
-                    "Could not process this document right now. Ensure it is a readable PDF or image.");
+                    "AI service timed out or is unreachable. Wait a minute for it to wake, then try again.");
         } catch (java.io.IOException ex) {
             throw new com.timelysync.exception.BadRequestException("Failed to read uploaded document");
         }
