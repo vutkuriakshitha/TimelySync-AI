@@ -1,5 +1,8 @@
 # Free-tier Git deploy for TimelySync (MongoDB Atlas + Render)
 # Every push to main redeploys all three web services.
+#
+# Frontend is named timelysync-frontend (Node web service).
+# Old static timelysync-web is removed from this file so Blueprint can delete it.
 
 services:
   - type: web
@@ -16,7 +19,7 @@ services:
       - key: AI_INTERNAL_API_KEY
         generateValue: true
       - key: CORS_ALLOWED_ORIGINS
-        value: https://timelysync-web.onrender.com,https://timelysync-api.onrender.com
+        value: https://timelysync-frontend.onrender.com,https://timelysync-api.onrender.com
       - key: LOG_LEVEL
         value: INFO
 
@@ -41,9 +44,9 @@ services:
       - key: AI_SERVICE_URL
         value: https://timelysync-ai.onrender.com
       - key: FRONTEND_URL
-        value: https://timelysync-web.onrender.com
+        value: https://timelysync-frontend.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://timelysync-web.onrender.com
+        value: https://timelysync-frontend.onrender.com
       - key: MAIL_ENABLED
         value: "false"
       - key: ALLOW_IN_APP_RESET_FALLBACK
@@ -51,9 +54,8 @@ services:
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "100"
 
-  # Dynamic web service (not static site) — rebuilds + redeploys on every Git push
   - type: web
-    name: timelysync-web
+    name: timelysync-frontend
     runtime: node
     plan: free
     region: oregon
