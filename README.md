@@ -127,4 +127,4 @@ Full steps: **[DEPLOY.md](./DEPLOY.md)**
 
 ## Author
 
-**V Akshitha**
+**Vutkuri Akshitha**
