@@ -4,7 +4,8 @@ AI-assisted personal time management for students and early-career professionals
 
 TimelySync helps you plan work across academics, opportunities, and personal goals — then flags tasks that are likely to slip before the deadline hits.
 
-**Live deploy (Render):** see `render.yaml`  
+**Live deploy:** see [`DEPLOY.md`](./DEPLOY.md) (Vercel frontend + Oracle Always Free API/AI)  
+**Legacy Render:** `render.yaml` (free tier sleeps — not recommended for daily use)  
 **Repo:** https://github.com/vutkuriakshitha/TimelySync-AI
 
 ---
@@ -102,14 +103,17 @@ Open http://localhost:3000
 
 ---
 
-## Deploy (Render)
+## Deploy
 
-`render.yaml` defines three free services. Required secrets:
+Preferred free long-term setup (no sleep):
 
-- `MONGODB_URI` (Atlas)
-- Optional: `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_ENABLED=true`
+1. **MongoDB Atlas** — keep your existing cluster  
+2. **Oracle Cloud Always Free** — run API + AI with `docker compose`  
+3. **Vercel** — host the React frontend  
 
-Frontend build uses `REACT_APP_API_URL=https://timelysync-api.onrender.com/api`.
+Full steps: **[DEPLOY.md](./DEPLOY.md)**
+
+`render.yaml` remains for the old Render free stack (services sleep after idle).
 
 ---
 

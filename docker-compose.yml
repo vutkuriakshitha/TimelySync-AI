@@ -1,0 +1,94 @@
+# TimelySync — API + AI on one always-on VM (Oracle Cloud Always Free Ampere)
+# Frontend stays on Vercel / Cloudflare Pages.
+#
+# Usage on the VM:
+#   cp deploy/oracle/.env.example .env
+#   # edit .env
+#   docker compose up -d --build
+
+services:
+  ai:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: timelysync-ai
+    restart: unless-stopped
+    environment:
+      PORT: "8000"
+      MONGODB_URI: ${MONGODB_URI}
+      AI_INTERNAL_API_KEY: ${AI_INTERNAL_API_KEY}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    # Not published publicly — only reachable by the API container
+    expose:
+      - "8000"
+    networks:
+      - timelysync
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  api:
+    build:
+      context: ./timelysync-backend/timelysync-backend
+      dockerfile: Dockerfile
+    container_name: timelysync-api
+    restart: unless-stopped
+    depends_on:
+      ai:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      MONGODB_URI: ${MONGODB_URI}
+      JWT_SECRET: ${JWT_SECRET}
+      AI_INTERNAL_API_KEY: ${AI_INTERNAL_API_KEY}
+      AI_SERVICE_URL: http://ai:8000
+      FRONTEND_URL: ${FRONTEND_URL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      ALLOW_IN_APP_RESET_FALLBACK: ${ALLOW_IN_APP_RESET_FALLBACK:-true}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-15}
+    ports:
+      - "8080:8080"
+    networks:
+      - timelysync
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  # Optional HTTPS reverse proxy (use when you have a domain pointing at this VM)
+  # caddy:
+  #   image: caddy:2
+  #   container_name: timelysync-caddy
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./deploy/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - timelysync
+
+networks:
+  timelysync:
+    driver: bridge
+
+# volumes:
+#   caddy_data:
+#   caddy_config:

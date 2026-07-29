@@ -1,0 +1,6 @@
+# Uncomment the caddy service in docker-compose.yml, then set your domain.
+# Point DNS A record for api.yourdomain.com → Oracle VM public IP.
+
+api.yourdomain.com {
+	reverse_proxy api:8080
+}
