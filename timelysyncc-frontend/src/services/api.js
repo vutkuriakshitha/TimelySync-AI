@@ -27,14 +27,22 @@ export const registerUnauthorizedHandler = (handler) => {
   onUnauthorized = handler;
 };
 
+const isPublicAuthUrl = (url = "") =>
+  url.includes("/auth/login") ||
+  url.includes("/auth/register") ||
+  url.includes("/auth/forgot-password") ||
+  url.includes("/auth/reset-password") ||
+  url.includes("/auth/me");
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || "";
-    const isAuthEndpoint = url.includes("/auth/login") || url.includes("/auth/register");
 
-    if (status === 401 && !isAuthEndpoint) {
+    // Never force-redirect away from public auth flows. /auth/me failures
+    // during bootstrap are handled quietly by AuthContext.clearSession.
+    if (status === 401 && !isPublicAuthUrl(url)) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (onUnauthorized) onUnauthorized();

@@ -49,10 +49,22 @@ services:
         value: https://timelysync-frontend.onrender.com
       - key: MAIL_ENABLED
         value: "false"
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
       - key: ALLOW_IN_APP_RESET_FALLBACK
         value: "true"
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "100"
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "15"
 
   - type: web
     name: timelysync-frontend

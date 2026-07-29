@@ -19,6 +19,8 @@ _MODEL_NAMES = [
     "intake_category_model",
     "intake_priority_model",
     "deadline_type_model",
+    "deadline_document_model",
+    "deadline_date_model",
 ]
 
 

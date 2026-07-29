@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-bootstrap";
 import { ArrowLeft, Sparkles } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { TaskContext } from "../context/TaskContext";
 import SmartIntakeModal from "../components/tasks/SmartIntakeModal";
@@ -61,7 +62,47 @@ const CreateTask = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSmartIntakeResult = (result) => {
+  const handleSmartIntakeResult = async (result) => {
+    if (result?.mode === "batch" && Array.isArray(result.tasks) && result.tasks.length) {
+      setShowSmartIntake(false);
+      setIsSubmitting(true);
+      setFormError("");
+      let created = 0;
+      const errors = [];
+      try {
+        for (const task of result.tasks) {
+          if (!task.title || !task.dueDate) continue;
+          const payload = {
+            title: task.title,
+            description: task.description || "",
+            category: task.category || "ACADEMIC",
+            priority: task.priority || "MEDIUM",
+            impact: "MEDIUM",
+            effort: "MEDIUM",
+            dueDate: new Date(task.dueDate).toISOString(),
+            tags: [],
+            notes: "",
+          };
+          const outcome = await createTask(payload, { silent: true });
+          if (outcome.success) created += 1;
+          else errors.push(outcome.error || task.title);
+        }
+        if (created > 0) {
+          toast.success(
+            created === 1
+              ? "Created 1 task from Smart Intake."
+              : `Created ${created} tasks from Smart Intake.`,
+          );
+          navigate("/dashboard");
+        } else {
+          setFormError(errors[0] || "Could not create tasks from Smart Intake.");
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       title: result.title || prev.title,

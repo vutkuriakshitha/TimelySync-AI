@@ -23,7 +23,8 @@ inference time):
 | `POST /predict/impact` | Deadline-miss impact severity | `RandomForestClassifier` (multi-class) |
 | `POST /predict/postanalysis` | Root-cause of a late completion | `RandomForestClassifier` (multi-class) |
 | `POST /predict/intake` | Smart task intake (category + priority) | TF-IDF + `LogisticRegression` (x2), plus `dateparser` for due-date extraction |
-| `POST /predict/deadline-extraction` | OCR / notice deadline extraction from pasted text | TF-IDF + `LogisticRegression` deadline-type classifier, `dateparser`, range detection |
+| `POST /predict/deadline-extraction` | OCR / notice deadline extraction from pasted text | **Fully ML** (`deadline-ml-v10`): TF-IDF+LR for deadline types & document categories; **ML calendar-date span detector**; soft-wrap OCR join; absolute normalize only (rejects academic years like `2026-27`). Retrain: `python -m app.training.train_deadline_model` then `POST /admin/reload-models` |
+| `POST /predict/document-deadlines` | Upload PDF/image → OCR → deadline extraction | pdfplumber / Tesseract + same ML extractor |
 | `POST /predict/document-deadlines` | Upload PDF/image → OCR → deadline extraction | `pdfplumber` / `pytesseract` + deadline extractor |
 
 Since this is a brand new product with no historical data yet, the models

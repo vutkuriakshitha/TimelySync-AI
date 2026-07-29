@@ -6,8 +6,9 @@ import io
 import logging
 from typing import Optional
 
-logger = logging.getLogger("ai-service.ocr")
+from app.ml.deadline_extractor import clean_ocr_text
 
+logger = logging.getLogger("ai-service.ocr")
 _MAX_PAGES = 50
 _MIN_TEXT_CHARS = 20
 
@@ -99,7 +100,7 @@ def extract_text(filename: str, content_type: Optional[str], data: bytes) -> dic
         method = "ocr"
         text = _ocr_image_bytes(data)
 
-    cleaned = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    cleaned = clean_ocr_text(text)
     if len(cleaned) < 5:
         raise ValueError("No readable text was found in the uploaded document.")
 

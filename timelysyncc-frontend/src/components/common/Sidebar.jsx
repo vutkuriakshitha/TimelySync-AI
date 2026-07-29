@@ -14,7 +14,7 @@ import {
   User,
 } from "lucide-react";
 
-const Sidebar = () => {
+const Sidebar = ({ open = false, onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -28,10 +28,14 @@ const Sidebar = () => {
     { path: "/accountability", icon: BarChart3, label: "Accountability" },
   ];
 
+  const go = (path) => {
+    navigate(path);
+    if (onNavigate) onNavigate();
+  };
+
   return (
-    <div
-      className="bg-dark text-white vh-100 position-fixed"
-      style={{ width: "250px", overflowY: "auto" }}
+    <aside
+      className={`app-sidebar bg-dark text-white vh-100 position-fixed${open ? " is-open" : ""}`}
     >
       <div className="p-4 border-bottom border-secondary">
         <h4 className="text-primary mb-0">TimelySync</h4>
@@ -41,7 +45,7 @@ const Sidebar = () => {
         {menuItems.map((item) => (
           <Nav.Link
             key={item.path}
-            onClick={() => navigate(item.path)}
+            onClick={() => go(item.path)}
             className={`text-white mb-2 ${location.pathname === item.path ? "bg-primary" : ""}`}
             style={{
               cursor: "pointer",
@@ -55,7 +59,7 @@ const Sidebar = () => {
         ))}
         <hr className="bg-secondary my-3" />
         <Nav.Link
-          onClick={() => navigate("/profile")}
+          onClick={() => go("/profile")}
           className="text-white mb-2"
           style={{
             cursor: "pointer",
@@ -67,7 +71,7 @@ const Sidebar = () => {
           Profile
         </Nav.Link>
         <Nav.Link
-          onClick={() => navigate("/settings")}
+          onClick={() => go("/settings")}
           className="text-white"
           style={{
             cursor: "pointer",
@@ -79,7 +83,7 @@ const Sidebar = () => {
           Settings
         </Nav.Link>
       </Nav>
-    </div>
+    </aside>
   );
 };
 

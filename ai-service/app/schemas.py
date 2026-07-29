@@ -37,8 +37,11 @@ class DeadlineTextRequest(BaseModel):
 
 class DeadlineRecord(BaseModel):
     deadlineType: str
-    date: Optional[str] = None
+    date: Optional[str] = None  # DD-MM-YYYY display
+    dateIso: Optional[str] = None  # YYYY-MM-DD
     dateOriginal: Optional[str] = None
+    purpose: Optional[str] = None
+    priority: Optional[str] = None  # HIGH / MEDIUM / LOW
     confidence: str
     confidenceScore: float = 0.0
     originalSentence: str = ""
@@ -48,11 +51,25 @@ class DeadlineRecord(BaseModel):
     pageNumber: Optional[int] = None
     needsReferenceDate: bool = False
     explanation: Optional[str] = None
+    relatedEvent: Optional[str] = None
+    relationshipGroupId: Optional[str] = None
+    relationshipRole: Optional[str] = None
+    relationshipOrder: Optional[int] = None
+    fineAmount: Optional[str] = None
+    lateFee: Optional[str] = None
+    penalty: Optional[str] = None
+    description: Optional[str] = None
+    taskTitle: Optional[str] = None
+    suggestedCategory: Optional[str] = None
+    suggestedDueDate: Optional[str] = None
+    isActionable: bool = True
 
 
 class DateRangeRecord(BaseModel):
     startDate: str
     endDate: str
+    startDateIso: Optional[str] = None
+    endDateIso: Optional[str] = None
     startDateOriginal: str = ""
     endDateOriginal: str = ""
     purpose: str
@@ -62,15 +79,44 @@ class DateRangeRecord(BaseModel):
     contextAfter: str = ""
     sectionHeading: Optional[str] = None
     pageNumber: Optional[int] = None
+    relationshipGroupId: Optional[str] = None
+    fineAmount: Optional[str] = None
+    lateFee: Optional[str] = None
+    penalty: Optional[str] = None
+
+
+class DeadlineRelationship(BaseModel):
+    groupId: str
+    processName: str
+    stages: list[str] = Field(default_factory=list)
+    description: str = ""
+
+
+class SuggestedTask(BaseModel):
+    title: str
+    category: str
+    priority: str
+    dueDate: str
+    dueDateDisplay: Optional[str] = None
+    description: str = ""
+    sourceDeadlineType: Optional[str] = None
+    relatedEvent: Optional[str] = None
+    relationshipGroupId: Optional[str] = None
+    fineAmount: Optional[str] = None
+    lateFee: Optional[str] = None
+    penalty: Optional[str] = None
 
 
 class DeadlineExtractionResponse(BaseModel):
     deadlines: list[DeadlineRecord]
     dateRanges: list[DateRangeRecord]
+    suggestedTasks: list[SuggestedTask] = Field(default_factory=list)
+    relationships: list[DeadlineRelationship] = Field(default_factory=list)
     summary: str
     totalDeadlines: int
     totalDateRanges: int
     modelVersion: str
+    documentType: Optional[str] = None
     extractedText: Optional[str] = None
     extractionMethod: Optional[str] = None
     characterCount: Optional[int] = None

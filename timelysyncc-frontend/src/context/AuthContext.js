@@ -53,15 +53,40 @@ export const AuthProvider = ({ children }) => {
     bootstrap();
   }, [clearSession, loadAvailableAccounts]);
 
-  // Register a global 401 handler so any expired/invalid token anywhere in
-  // the app forces a clean logout instead of a silent broken UI.
+  // Register a global 401 handler so expired tokens on protected pages
+  // force a clean logout — but never yank users off public auth routes.
   useEffect(() => {
     registerUnauthorizedHandler(() => {
+      const path = window.location.pathname || "";
+      const onPublicAuth =
+        path.startsWith("/login") ||
+        path.startsWith("/signup") ||
+        path.startsWith("/register") ||
+        path.startsWith("/forgot-password") ||
+        path.startsWith("/reset-password");
+
       clearSession();
-      toast.error("Your session has expired. Please log in again.");
-      navigate("/login");
+      if (!onPublicAuth) {
+        toast.error("Your session has expired. Please log in again.");
+        navigate("/login");
+      }
     });
   }, [clearSession, navigate]);
+
+  const authErrorMessage = (error, fallback) => {
+    const status = error.response?.status;
+    if (status === 429) {
+      return "Too many attempts. Please wait a minute and try again.";
+    }
+    return (
+      error.response?.data?.message ||
+      (error.code === "ECONNABORTED"
+        ? "Server took too long to respond. Please try again."
+        : error.message?.includes("Network")
+          ? "Cannot reach the server. Is the backend running?"
+          : fallback)
+    );
+  };
 
   const login = async (email, password) => {
     try {
@@ -78,13 +103,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        (error.code === "ECONNABORTED"
-          ? "Server took too long to respond. Please try again."
-          : error.message?.includes("Network")
-            ? "Cannot reach the server. Is the backend running?"
-            : "Login failed. Please try again.");
+      const message = authErrorMessage(error, "Login failed. Please try again.");
       toast.error(message);
       return { success: false, error: message };
     }
@@ -105,13 +124,10 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        (error.code === "ECONNABORTED"
-          ? "Server took too long to respond. Please try again."
-          : error.message?.includes("Network")
-            ? "Cannot reach the server. Is the backend running?"
-            : "Registration failed. Please try again.");
+      const message = authErrorMessage(
+        error,
+        "Registration failed. Please try again.",
+      );
       toast.error(message);
       return { success: false, error: message };
     }

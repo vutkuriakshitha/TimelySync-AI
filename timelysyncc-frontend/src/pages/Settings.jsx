@@ -89,6 +89,9 @@ const Settings = () => {
               <h5 className="mb-3 d-flex align-items-center gap-2">
                 <Bell size={18} /> Notifications
               </h5>
+              <p className="text-muted small mb-3">
+                These preferences are stored on this device only (demo). They do not send live emails or push alerts yet.
+              </p>
               <Form>
                 <Form.Check
                   type="switch"

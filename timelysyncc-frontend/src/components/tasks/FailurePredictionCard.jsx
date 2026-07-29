@@ -16,38 +16,40 @@ const FailurePredictionCard = ({ predictions }) => {
   if (!predictions || predictions.length === 0) return null;
 
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-danger text-white">
+    <Card className="shadow-sm border-0 mb-0 dash-ai-card">
+      <Card.Header className="dash-ai-card__header text-white dash-card-header">
         <div className="d-flex align-items-center gap-2">
-          <Brain size={18} />
-          <h6 className="mb-0 fw-semibold">AI Failure Predictions</h6>
+          <Brain size={16} className="flex-shrink-0" />
+          <h6 className="mb-0 dash-card-title text-truncate">AI Failure Predictions</h6>
         </div>
       </Card.Header>
       <Card.Body className="p-0">
         {predictions.slice(0, 3).map((pred) => (
           <div
             key={pred.taskId}
-            className="p-3 border-bottom"
+            className="dash-list-item dash-ai-item"
             style={{ cursor: "pointer" }}
             onClick={() => navigate(`/task/${pred.taskId}`)}
           >
-            <div className="d-flex justify-content-between align-items-start mb-2">
-              <span className="fw-semibold">{pred.title}</span>
-              <Badge bg={getRiskColor(pred.probability)} pill>
+            <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+              <span className="fw-semibold dash-body text-truncate min-w-0">
+                {pred.title}
+              </span>
+              <Badge bg={getRiskColor(pred.probability)} pill className="dash-meta flex-shrink-0">
                 {pred.probability}% risk
               </Badge>
             </div>
             {pred.riskFactors && pred.riskFactors.length > 0 && (
-              <p className="small text-muted mb-2">{pred.riskFactors[0]}</p>
+              <p className="dash-meta text-muted mb-2 dash-task-desc">{pred.riskFactors[0]}</p>
             )}
             <ProgressBar
               now={pred.probability}
               variant={getRiskColor(pred.probability)}
-              style={{ height: "6px" }}
+              style={{ height: "8px" }}
               className="mb-2"
             />
             <div className="d-flex justify-content-end">
-              <small className="text-primary d-flex align-items-center gap-1">
+              <small className="text-primary dash-icon-text dash-meta">
                 View Task <ArrowRight size={12} />
               </small>
             </div>

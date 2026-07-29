@@ -139,33 +139,37 @@ public class AuthService {
         String resetLink = emailService.buildPasswordResetLink(rawTokenHolder[0]);
 
         if (!emailService.isMailConfigured()) {
-            return fallbackOrSilent(normalized, resetLink, "SMTP not configured");
+            return fallbackOrSilent(normalized, resetLink, "Gmail SMTP not configured",
+                    "Gmail SMTP is not configured. Set MAIL_ENABLED=true and MAIL_HOST/MAIL_USERNAME/MAIL_PASSWORD in .env");
         }
 
-        boolean delivered = emailService.sendPasswordResetEmail(normalized, rawTokenHolder[0]);
-        if (delivered) {
-            return new ForgotPasswordResponse(FORGOT_PASSWORD_MESSAGE, true, null);
+        MailSendResult sendResult = emailService.sendPasswordResetEmail(normalized, rawTokenHolder[0]);
+        if (sendResult.success()) {
+            return new ForgotPasswordResponse(FORGOT_PASSWORD_MESSAGE, true, null, null);
         }
 
-        return fallbackOrSilent(normalized, resetLink, "SMTP send failed");
+        logger.error("Password-reset email failed for {}: {}", normalized, sendResult.error());
+        return fallbackOrSilent(normalized, resetLink, "Gmail SMTP send failed", sendResult.error());
     }
 
-    private ForgotPasswordResponse fallbackOrSilent(String email, String resetLink, String reason) {
+    private ForgotPasswordResponse fallbackOrSilent(String email, String resetLink, String reason, String smtpError) {
         if (allowInAppResetFallback) {
-            logger.warn("{} for {} — returning in-app reset link", reason, email);
+            logger.warn("{} for {} — in-app fallback ON. SMTP detail: {}", reason, email, smtpError);
             return new ForgotPasswordResponse(
-                    "We could not send email right now. Use the reset link below (expires in 1 hour).",
+                    "Enter a new password below to finish resetting your account.",
                     false,
-                    resetLink);
+                    resetLink,
+                    smtpError);
         }
 
-        logger.warn("{} for {} — clearing unused reset token (in-app fallback disabled)", reason, email);
+        logger.warn("{} for {} — clearing unused reset token. SMTP detail: {}", reason, email, smtpError);
         userRepository.findByEmail(email).ifPresent(user -> {
             user.setPasswordResetTokenHash(null);
             user.setPasswordResetTokenExpiry(null);
             userRepository.save(user);
         });
-        return new ForgotPasswordResponse(FORGOT_PASSWORD_MESSAGE, false, null);
+        // Surface the exact SMTP error to the client when fallback is disabled.
+        throw new BadRequestException(smtpError != null ? smtpError : reason);
     }
 
     public void resetPassword(String rawToken, String newPassword) {

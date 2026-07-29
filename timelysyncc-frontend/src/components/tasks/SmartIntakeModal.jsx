@@ -26,6 +26,59 @@ const confidenceVariant = (level) => {
   return "secondary";
 };
 
+const mapDeadlineToCategory = (type) => {
+  const t = (type || "").toLowerCase();
+  if (
+    t.includes("exam") ||
+    t.includes("submission") ||
+    t.includes("verification") ||
+    t.includes("registration") ||
+    t.includes("fee") ||
+    t.includes("admit") ||
+    t.includes("project") ||
+    t.includes("viva") ||
+    t.includes("thesis") ||
+    t.includes("assignment") ||
+    t.includes("approval") ||
+    t.includes("review")
+  ) {
+    return "ACADEMIC";
+  }
+  if (
+    t.includes("apply") ||
+    t.includes("tender") ||
+    t.includes("bid") ||
+    t.includes("internship") ||
+    t.includes("placement")
+  ) {
+    return "OPPORTUNITY";
+  }
+  if (
+    t.includes("event") ||
+    t.includes("meeting") ||
+    t.includes("hearing") ||
+    t.includes("seminar") ||
+    t.includes("workshop")
+  ) {
+    return "EVENT";
+  }
+  return "PERSONAL_GOAL";
+};
+
+const toApplyPayload = (suggested) => {
+  const fineNote = suggested.lateFee || suggested.fineAmount;
+  return {
+    title: suggested.title,
+    description: fineNote
+      ? `${suggested.description || ""}${suggested.description ? " " : ""}Late fee/fine: ${fineNote}`.trim()
+      : suggested.description,
+    category: suggested.category || mapDeadlineToCategory(suggested.sourceDeadlineType),
+    priority: suggested.priority || "MEDIUM",
+    dueDate: suggested.dueDate ? `${suggested.dueDate}T23:59:00` : null,
+    dueDateDisplay: suggested.dueDateDisplay,
+  };
+};
+
 const SmartIntakeModal = ({ show, onHide, onApply }) => {
   const fileInputRef = useRef(null);
   const [mode, setMode] = useState("text");
@@ -51,6 +104,41 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
     onHide();
   };
 
+  const actionableSuggestedTasks = () =>
+    (deadlineResult?.suggestedTasks || []).filter((t) => t.title && t.dueDate);
+
+  const suggestedTaskFromDeadlines = (deadlineData) => {
+    const suggested =
+      deadlineData?.suggestedTasks?.find((t) => t.dueDate) ||
+      deadlineData?.suggestedTasks?.[0];
+    if (suggested) {
+      return toApplyPayload(suggested);
+    }
+    const actionable = (deadlineData?.deadlines || []).find(
+      (d) =>
+        d.date &&
+        d.isActionable !== false &&
+        d.deadlineType &&
+        d.deadlineType !== "Document Date" &&
+        d.deadlineType !== "Registration Closed",
+    );
+    if (!actionable) return null;
+    const iso =
+      actionable.dateIso ||
+      (() => {
+        const [day, month, year] = actionable.date.split("-");
+        return `${year}-${month}-${day}`;
+      })();
+    return {
+      title: actionable.taskTitle || actionable.deadlineType,
+      description: actionable.description || actionable.originalSentence,
+      category:
+        actionable.suggestedCategory || mapDeadlineToCategory(actionable.deadlineType),
+      priority: actionable.priority || "MEDIUM",
+      dueDate: `${iso}T23:59:00`,
+    };
+  };
+
   const handleAnalyzeText = async () => {
     if (!text.trim()) {
       setError("Please paste OCR text or a notice excerpt first.");
@@ -61,12 +149,15 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
     setIntakeResult(null);
     setDeadlineResult(null);
     try {
-      const [intakeResp, deadlineResp] = await Promise.all([
-        aiService.smartIntake(text.trim()),
-        aiService.extractDeadlines(text.trim()),
-      ]);
-      setIntakeResult(intakeResp.data);
+      const deadlineResp = await aiService.extractDeadlines(text.trim());
       setDeadlineResult(deadlineResp.data);
+      const fromDeadlines = suggestedTaskFromDeadlines(deadlineResp.data);
+      if (fromDeadlines) {
+        setIntakeResult(fromDeadlines);
+      } else {
+        const intakeResp = await aiService.smartIntake(text.trim());
+        setIntakeResult(intakeResp.data);
+      }
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -89,10 +180,15 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
     try {
       const deadlineResp = await aiService.extractDocumentDeadlines(file);
       setDeadlineResult(deadlineResp.data);
-      const extracted = deadlineResp.data?.extractedText || "";
-      if (extracted.trim()) {
-        const intakeResp = await aiService.smartIntake(extracted.slice(0, 50000));
-        setIntakeResult(intakeResp.data);
+      const fromDeadlines = suggestedTaskFromDeadlines(deadlineResp.data);
+      if (fromDeadlines) {
+        setIntakeResult(fromDeadlines);
+      } else {
+        const extracted = deadlineResp.data?.extractedText || "";
+        if (extracted.trim()) {
+          const intakeResp = await aiService.smartIntake(extracted.slice(0, 50000));
+          setIntakeResult(intakeResp.data);
+        }
       }
     } catch (err) {
       setError(
@@ -107,6 +203,7 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
   const handleApplyIntake = () => {
     if (!intakeResult) return;
     onApply({
+      mode: "single",
       title: intakeResult.title,
       description: intakeResult.description,
       category: intakeResult.category,
@@ -117,51 +214,54 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
   };
 
   const handleApplyDeadline = (deadline) => {
-    if (!deadline?.date) return;
+    if (!deadline?.date || deadline.deadlineType === "Document Date") return;
     const [day, month, year] = deadline.date.split("-");
     const isoDue = `${year}-${month}-${day}T23:59:00`;
+    const suggested = deadlineResult?.suggestedTasks?.find(
+      (t) =>
+        t.sourceDeadlineType === deadline.deadlineType &&
+        t.dueDate === `${year}-${month}-${day}`,
+    );
     onApply({
-      title: `${deadline.deadlineType}${deadline.sectionHeading ? ` – ${deadline.sectionHeading}` : ""}`,
-      description: deadline.originalSentence,
-      category: mapDeadlineToCategory(deadline.deadlineType),
-      priority: deadline.confidence === "High" ? "HIGH" : "MEDIUM",
+      mode: "single",
+      title: suggested?.title || deadline.taskTitle || deadline.deadlineType,
+      description: suggested?.description || deadline.originalSentence,
+      category:
+        suggested?.category || mapDeadlineToCategory(deadline.deadlineType),
+      priority: suggested?.priority || "MEDIUM",
       dueDate: isoDue,
     });
     handleClose();
   };
 
-  const mapDeadlineToCategory = (type) => {
-    const t = (type || "").toLowerCase();
-    if (t.includes("exam") || t.includes("submission") || t.includes("verification")) {
-      return "ACADEMIC";
-    }
-    if (
-      t.includes("apply") ||
-      t.includes("tender") ||
-      t.includes("bid") ||
-      t.includes("registration")
-    ) {
-      return "OPPORTUNITY";
-    }
-    if (t.includes("event") || t.includes("meeting") || t.includes("hearing")) {
-      return "EVENT";
-    }
-    return "PERSONAL_GOAL";
+  const handleApplySuggested = (task) => {
+    onApply({ mode: "single", ...toApplyPayload(task) });
+    handleClose();
+  };
+
+  const handleCreateAllSuggested = () => {
+    const tasks = actionableSuggestedTasks().map(toApplyPayload);
+    if (!tasks.length) return;
+    onApply({ mode: "batch", tasks });
+    handleClose();
   };
 
   const hasResults = intakeResult || deadlineResult;
+  const multiSuggested = actionableSuggestedTasks();
 
   return (
     <Modal show={show} onHide={handleClose} centered size="lg" scrollable>
       <Modal.Header closeButton>
         <Modal.Title className="d-flex align-items-center gap-2">
-          <Sparkles size={20} className="text-primary" /> Smart Intake – OCR Deadline Extraction
+          <Sparkles size={20} className="text-primary" /> Smart Intake – OCR Deadline
+          Extraction
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <p className="text-muted small">
           Paste OCR text or upload a PDF/image notice. Our ML models extract every
-          important date, classify its purpose, detect ranges, and suggest a task.
+          important date, classify its purpose, and suggest one task per deadline. Use{" "}
+          <strong>Create All Tasks</strong> when a notice has multiple due dates.
         </p>
 
         {error && <Alert variant="danger">{error}</Alert>}
@@ -200,7 +300,7 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
                 <Form.Text className="text-muted">
-                  PDF (text or scanned) and images supported. Max 15 MB.
+                  PDF and images (PNG/JPG) supported — not Word (.docx). Max 15 MB.
                 </Form.Text>
               </Form.Group>
             )}
@@ -249,6 +349,7 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
                       <th>Purpose</th>
                       <th>Start</th>
                       <th>End</th>
+                      <th>Fee</th>
                       <th>Confidence</th>
                     </tr>
                   </thead>
@@ -258,8 +359,74 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
                         <td>{range.purpose}</td>
                         <td>{range.startDate}</td>
                         <td>{range.endDate}</td>
+                        <td>{range.lateFee || range.fineAmount || "—"}</td>
                         <td>
-                          <Badge bg={confidenceVariant(range.confidence)}>{range.confidence}</Badge>
+                          <Badge bg={confidenceVariant(range.confidence)}>
+                            {range.confidence}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </>
+            )}
+
+            {deadlineResult.relationships?.length > 0 && (
+              <>
+                <h6 className="fw-semibold mt-3">Related Process Stages</h6>
+                <ul className="small mb-3">
+                  {deadlineResult.relationships.map((rel, idx) => (
+                    <li key={`rel-${idx}`}>
+                      <strong>{rel.processName}:</strong> {(rel.stages || []).join(" → ")}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {multiSuggested.length > 0 && (
+              <>
+                <div className="d-flex justify-content-between align-items-center mt-3 mb-2">
+                  <h6 className="fw-semibold mb-0">
+                    Suggested Tasks ({multiSuggested.length})
+                  </h6>
+                  {multiSuggested.length > 1 && (
+                    <Button size="sm" variant="success" onClick={handleCreateAllSuggested}>
+                      Create All {multiSuggested.length} Tasks
+                    </Button>
+                  )}
+                </div>
+                <Table responsive size="sm" bordered className="mb-3">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Task</th>
+                      <th>Due</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {multiSuggested.map((task, idx) => (
+                      <tr key={`task-${idx}`}>
+                        <td>
+                          <div className="fw-semibold small">{task.title}</div>
+                          {task.lateFee && (
+                            <Badge bg="warning" text="dark" className="mt-1">
+                              {task.lateFee} late fee
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="text-nowrap small">
+                          {task.dueDateDisplay || task.dueDate}
+                        </td>
+                        <td>
+                          <Button
+                            size="sm"
+                            variant="outline-success"
+                            onClick={() => handleApplySuggested(task)}
+                          >
+                            Prefill Form
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -286,6 +453,11 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
                         <tr key={`deadline-${idx}`}>
                           <td>
                             <div className="fw-semibold small">{deadline.deadlineType}</div>
+                            {deadline.fineAmount && (
+                              <Badge bg="warning" text="dark" className="mt-1">
+                                Fine {deadline.fineAmount}
+                              </Badge>
+                            )}
                             {deadline.needsReferenceDate && (
                               <Badge bg="warning" className="mt-1">
                                 Needs reference date
@@ -301,6 +473,13 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
                             {deadline.dateOriginal && (
                               <div className="text-muted small">({deadline.dateOriginal})</div>
                             )}
+                            {deadline.priority && (
+                              <div className="small mt-1">
+                                <Badge bg="light" text="dark">
+                                  {deadline.priority}
+                                </Badge>
+                              </div>
+                            )}
                           </td>
                           <td>
                             <Badge bg={confidenceVariant(deadline.confidence)}>
@@ -308,13 +487,13 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
                             </Badge>
                           </td>
                           <td>
-                            {deadline.date && (
+                            {deadline.date && deadline.deadlineType !== "Document Date" && (
                               <Button
                                 size="sm"
                                 variant="outline-success"
                                 onClick={() => handleApplyDeadline(deadline)}
                               >
-                                Create Task
+                                Prefill Form
                               </Button>
                             )}
                           </td>
@@ -334,7 +513,11 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
 
         {intakeResult && (
           <div className="border rounded p-3 bg-light mt-3">
-            <h6 className="fw-semibold mb-2">Suggested Primary Task</h6>
+            <h6 className="fw-semibold mb-2">
+              {multiSuggested.length > 1
+                ? "Earliest / Primary Task"
+                : "Suggested Primary Task"}
+            </h6>
             <p className="mb-2">
               <strong>Title:</strong> {intakeResult.title}
             </p>
@@ -356,15 +539,33 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
             </p>
             {intakeResult.dueDate && (
               <p className="mb-0 small text-muted">
-                Detected due date: {new Date(intakeResult.dueDate).toLocaleString()}
+                Detected due date:{" "}
+                {intakeResult.dueDateDisplay ||
+                  new Date(intakeResult.dueDate).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
               </p>
             )}
-            <div className="d-flex gap-2 mt-3">
+            {intakeResult.description && (
+              <p className="mb-0 mt-2 small">{intakeResult.description}</p>
+            )}
+            <div className="d-flex flex-wrap gap-2 mt-3">
               <Button variant="outline-secondary" size="sm" onClick={resetState}>
                 Analyze Another
               </Button>
-              <Button variant="success" size="sm" onClick={handleApplyIntake}>
-                Use Primary Suggestion
+              {multiSuggested.length > 1 && (
+                <Button variant="success" size="sm" onClick={handleCreateAllSuggested}>
+                  Create All {multiSuggested.length} Tasks
+                </Button>
+              )}
+              <Button
+                variant={multiSuggested.length > 1 ? "outline-success" : "success"}
+                size="sm"
+                onClick={handleApplyIntake}
+              >
+                Prefill This One
               </Button>
             </div>
           </div>
@@ -375,6 +576,11 @@ const SmartIntakeModal = ({ show, onHide, onApply }) => {
             <Button variant="outline-secondary" size="sm" onClick={resetState}>
               Analyze Another
             </Button>
+            {multiSuggested.length > 1 && (
+              <Button size="sm" variant="success" onClick={handleCreateAllSuggested}>
+                Create All {multiSuggested.length} Tasks
+              </Button>
+            )}
           </div>
         )}
       </Modal.Body>

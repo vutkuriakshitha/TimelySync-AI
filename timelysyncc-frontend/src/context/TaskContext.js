@@ -71,17 +71,21 @@ export const TaskProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [user, loadTasks, loadFailurePredictions]);
 
-  const createTask = async (taskData) => {
+  const createTask = async (taskData, options = {}) => {
     try {
       const response = await taskService.createTask(taskData);
       const newTask = response.data;
       setTasks((prev) => [newTask, ...prev]);
-      toast.success("Task created successfully!");
+      if (!options.silent) {
+        toast.success("Task created successfully!");
+      }
       return { success: true, task: newTask };
     } catch (error) {
       console.error("Error creating task:", error);
       const message = error.response?.data?.message || "Failed to create task";
-      toast.error(message);
+      if (!options.silent) {
+        toast.error(message);
+      }
       return { success: false, error: message };
     }
   };

@@ -262,18 +262,18 @@ const Dashboard = () => {
   };
 
   const getRiskBadge = (riskLevel, riskScore) => {
+    if (!riskLevel || riskLevel === "SAFE") return null;
     const config = {
       CRITICAL: { bg: "danger", icon: AlertTriangle, text: "Critical" },
       WARNING: { bg: "warning", icon: AlertTriangle, text: "Warning" },
-      SAFE: { bg: "success", icon: Shield, text: "Safe" },
     };
-    const { bg, icon: Icon, text } = config[riskLevel] || config.SAFE;
+    const { bg, icon: Icon, text } = config[riskLevel] || config.WARNING;
     return (
-      <Badge bg={bg} pill className="d-flex align-items-center gap-1 px-2 py-1">
+      <Badge bg={bg} pill className="dash-icon-text px-2 py-1 flex-shrink-0">
         <Icon size={12} />
         <span>{text}</span>
         {riskScore !== undefined && riskScore !== null && (
-          <span className="ms-1">({riskScore}%)</span>
+          <span>({riskScore}%)</span>
         )}
       </Badge>
     );
@@ -287,7 +287,7 @@ const Dashboard = () => {
     };
     const { bg, text } = config[priority] || config.LOW;
     return (
-      <Badge bg={bg} pill className="px-2 py-1">
+      <Badge bg={bg} pill className="px-2 py-1 dash-meta flex-shrink-0">
         {text}
       </Badge>
     );
@@ -333,84 +333,102 @@ const Dashboard = () => {
   }
 
   const cognitiveLoad = dashboardAnalytics?.cognitiveLoad;
+  const showSidebar =
+    (failurePredictions && failurePredictions.length > 0) || highRiskTasks.length > 0;
 
   return (
     <>
-      <Container fluid className="py-4 px-4">
+      <Container className="dashboard">
         {/* Header */}
-        <Row className="mb-4 align-items-center">
-          <Col md={8}>
-            <div>
-              <h2 className="text-primary mb-1 fw-bold">
-                Welcome back, {user?.name || "User"}! 👋
-              </h2>
-              <p className="text-muted mb-0">
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-          </Col>
-          <Col md={4}>
-            <div className="d-flex gap-2 justify-content-end">
-              <Button variant="outline-primary" onClick={() => navigate("/create-task")}>
-                <Plus size={18} className="me-2" />
-                Manual Add
-              </Button>
-              <Button variant="primary" onClick={() => navigate("/create-task?smart=true")}>
-                <Sparkles size={18} className="me-2" />
-                Smart Intake
-              </Button>
+        <Row className="dash-section g-3">
+          <Col xs={12}>
+            <div className="dash-header-bar d-flex justify-content-between">
+              <div className="min-w-0">
+                <h2 className="text-primary dash-page-title text-break mb-1">
+                  Welcome back, {user?.name || "User"}! 👋
+                </h2>
+                <p className="text-muted dash-page-subtitle mb-0">
+                  {new Date().toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+              <div className="dash-header-actions flex-shrink-0">
+                <Button
+                  variant="outline-primary"
+                  className="dash-btn-icon dash-header-btn"
+                  onClick={() => navigate("/create-task")}
+                >
+                  <Plus size={16} />
+                  Manual Add
+                </Button>
+                <Button
+                  variant="primary"
+                  className="dash-btn-icon dash-header-btn"
+                  onClick={() => navigate("/create-task?smart=true")}
+                >
+                  <Sparkles size={16} />
+                  Smart Intake
+                </Button>
+              </div>
             </div>
           </Col>
         </Row>
 
-        {/* User Stats Bar */}
-        <Row className="mb-4">
-          <Col>
-            <Card className="shadow-sm border-0 bg-gradient-primary text-white">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="bg-white bg-opacity-25 p-3 rounded-circle">
-                      <Activity size={24} className="text-white" />
+        {/* User Stats Bar — 12 */}
+        <Row className="dash-section g-3">
+          <Col xs={12}>
+            <Card className="shadow-sm border-0 dash-hero-card text-white">
+              <Card.Body className="p-3">
+                <div className="dash-hero-row d-flex justify-content-between align-items-center flex-wrap gap-3">
+                  <div className="d-flex align-items-center gap-3 min-w-0">
+                    <div className="dash-hero-icon rounded-circle dash-icon-wrap flex-shrink-0">
+                      <Activity size={20} />
                     </div>
-                    <div>
-                      <small className="text-white-50">Level {userStats.level}</small>
-                      <h5 className="text-white mb-0">
+                    <div className="min-w-0">
+                      <small className="dash-hero-muted dash-meta d-block">
+                        Level {userStats.level}
+                      </small>
+                      <h5 className="text-white dash-card-title text-truncate">
                         {userStats.xp} / {userStats.nextLevelXp} XP
                       </h5>
                       <ProgressBar
                         now={(userStats.xp / (userStats.nextLevelXp || 1)) * 100}
-                        variant="light"
-                        className="mt-1"
-                        style={{ height: "4px", width: "200px" }}
+                        className="dash-xp-progress"
                       />
                     </div>
                   </div>
-                  <div className="d-flex align-items-center gap-3">
-                    <div className="text-center">
-                      <Award size={20} className="text-white mb-1" />
+                  <div className="dash-hero-metrics d-flex align-items-stretch">
+                    <div className="dash-hero-metric text-center">
+                      <div className="d-flex justify-content-center mb-2">
+                        <Award size={16} />
+                      </div>
                       <div className="text-white">
-                        <strong>{userStats.achievements?.length || 0}</strong>
-                        <small className="d-block text-white-50">Achievements</small>
+                        <strong className="dash-body d-block">
+                          {userStats.achievements?.length || 0}
+                        </strong>
+                        <small className="d-block dash-hero-muted dash-meta">Achievements</small>
                       </div>
                     </div>
-                    <div className="text-center">
-                      <Star size={20} className="text-warning mb-1" />
+                    <div className="dash-hero-metric text-center">
+                      <div className="d-flex justify-content-center mb-2">
+                        <Star size={16} className="dash-hero-accent" />
+                      </div>
                       <div className="text-white">
-                        <strong>{userStats.streak}</strong>
-                        <small className="d-block text-white-50">Day Streak</small>
+                        <strong className="dash-body d-block">{userStats.streak}</strong>
+                        <small className="d-block dash-hero-muted dash-meta">Day Streak</small>
                       </div>
                     </div>
-                    <div className="text-center">
-                      <Gift size={20} className="text-white mb-1" />
+                    <div className="dash-hero-metric text-center">
+                      <div className="d-flex justify-content-center mb-2">
+                        <Gift size={16} />
+                      </div>
                       <div className="text-white">
-                        <strong>{userStats.coins}</strong>
-                        <small className="d-block text-white-50">Coins</small>
+                        <strong className="dash-body d-block">{userStats.coins}</strong>
+                        <small className="d-block dash-hero-muted dash-meta">Coins</small>
                       </div>
                     </div>
                   </div>
@@ -420,215 +438,269 @@ const Dashboard = () => {
           </Col>
         </Row>
 
-        {/* Cognitive Load Warning */}
+        {/* Cognitive Load Warning — 12 */}
         {cognitiveLoad?.level === "HIGH" && (
-          <Row className="mb-4">
-            <Col>
+          <Row className="dash-section g-3">
+            <Col xs={12}>
               <CognitiveLoadWarning
                 activeCount={cognitiveLoad.activeCount}
                 warningMessage={`You have ${cognitiveLoad.highPriorityCount} high-priority tasks among ${cognitiveLoad.activeCount} active tasks. Consider rescheduling or delegating some.`}
                 maxCapacity={10}
+                onViewTasks={() => setFilterType("ALL")}
+                onPrioritize={() => setFilterType("HIGH_RISK")}
               />
             </Col>
           </Row>
         )}
 
-        {/* Stats Cards */}
-        <Row className="mb-4 g-3">
-          <Col md={3}>
-            <Card className="shadow-sm border-0 h-100 bg-primary text-white">
+        {/* Stats Cards — 3 + 3 + 3 + 3 */}
+        <Row className="dash-section g-3">
+          <Col xs={12} sm={6} lg={3}>
+            <Card className="shadow-sm h-100 stat-card stat-card--primary">
               <Card.Body>
-                <div className="d-flex justify-content-between align-items-start">
-                  <div>
-                    <p className="text-white-50 mb-1">Total Tasks</p>
-                    <h2 className="text-white mb-0 fw-bold">{tasks.length}</h2>
-                    <small className="text-white-50">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="dash-stat-label">Total Tasks</p>
+                    <h2 className="dash-stat-value">{tasks.length}</h2>
+                    <small className="dash-meta text-muted d-block text-truncate">
                       {stats.active} active · {stats.completed} completed
                     </small>
                   </div>
-                  <div className="bg-white-20 p-3 rounded-circle">
-                    <Calendar size={28} className="text-white" />
+                  <div className="dash-icon-wrap stat-card__icon flex-shrink-0">
+                    <Calendar size={20} />
                   </div>
+                </div>
+                <div className="stat-card-footer">
+                  <ProgressBar
+                    now={
+                      tasks.length
+                        ? Math.round((stats.active / tasks.length) * 100)
+                        : 0
+                    }
+                  />
                 </div>
               </Card.Body>
             </Card>
           </Col>
-          <Col md={3}>
-            <Card className="shadow-sm border-0 h-100 bg-success text-white">
+          <Col xs={12} sm={6} lg={3}>
+            <Card className="shadow-sm h-100 stat-card stat-card--success">
               <Card.Body>
-                <div className="d-flex justify-content-between align-items-start">
-                  <div>
-                    <p className="text-white-50 mb-1">Completion Rate</p>
-                    <h2 className="text-white mb-0 fw-bold">{completionRate}%</h2>
-                    <small className="text-white-50">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="dash-stat-label">Completion Rate</p>
+                    <h2 className="dash-stat-value">{completionRate}%</h2>
+                    <small className="dash-meta text-muted d-block text-truncate">
                       {stats.completed} / {tasks.length} tasks
                     </small>
                   </div>
-                  <div className="bg-white-20 p-3 rounded-circle">
-                    <CheckCircle size={28} className="text-white" />
+                  <div className="dash-icon-wrap stat-card__icon flex-shrink-0">
+                    <CheckCircle size={20} />
                   </div>
                 </div>
-                <ProgressBar
-                  now={completionRate}
-                  variant="light"
-                  className="mt-3"
-                  style={{ height: "6px" }}
-                />
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="shadow-sm border-0 h-100 bg-warning text-white">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-start">
-                  <div>
-                    <p className="text-white-50 mb-1">On-Time Rate</p>
-                    <h2 className="text-white mb-0 fw-bold">{onTimeRate}%</h2>
-                    <small className="text-white-50">Completed before deadline</small>
-                  </div>
-                  <div className="bg-white-20 p-3 rounded-circle">
-                    <Clock size={28} className="text-white" />
-                  </div>
+                <div className="stat-card-footer">
+                  <ProgressBar now={completionRate} />
                 </div>
               </Card.Body>
             </Card>
           </Col>
-          <Col md={3}>
-            <Card className="shadow-sm border-0 h-100 bg-info text-white">
+          <Col xs={12} sm={6} lg={3}>
+            <Card className="shadow-sm h-100 stat-card stat-card--warning">
               <Card.Body>
-                <div className="d-flex justify-content-between align-items-start">
-                  <div>
-                    <p className="text-white-50 mb-1">Avg Risk Score</p>
-                    <h2 className="text-white mb-0 fw-bold">{avgRiskScore}%</h2>
-                    <small className="text-white-50">{highRiskTasks.length} high risk tasks</small>
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="dash-stat-label">On-Time Rate</p>
+                    <h2 className="dash-stat-value">{onTimeRate}%</h2>
+                    <small className="dash-meta text-muted d-block text-truncate">
+                      Completed before deadline
+                    </small>
                   </div>
-                  <div className="bg-white-20 p-3 rounded-circle">
-                    <Shield size={28} className="text-white" />
+                  <div className="dash-icon-wrap stat-card__icon flex-shrink-0">
+                    <Clock size={20} />
                   </div>
+                </div>
+                <div className="stat-card-footer">
+                  <ProgressBar now={onTimeRate} />
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col xs={12} sm={6} lg={3}>
+            <Card className="shadow-sm h-100 stat-card stat-card--info">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="dash-stat-label">Avg Risk Score</p>
+                    <h2 className="dash-stat-value">{avgRiskScore}%</h2>
+                    <small className="dash-meta text-muted d-block text-truncate">
+                      {highRiskTasks.length} high risk tasks
+                    </small>
+                  </div>
+                  <div className="dash-icon-wrap stat-card__icon flex-shrink-0">
+                    <Shield size={20} />
+                  </div>
+                </div>
+                <div className="stat-card-footer">
+                  <ProgressBar now={avgRiskScore} />
                 </div>
               </Card.Body>
             </Card>
           </Col>
         </Row>
 
-        {/* Search and Filters */}
-        <Row className="mb-4">
-          <Col md={5}>
-            <InputGroup>
-              <InputGroup.Text className="bg-white border-end-0">
-                <Search size={18} className="text-muted" />
-              </InputGroup.Text>
-              <Form.Control
-                type="text"
-                placeholder="Search tasks..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-start-0"
-              />
-              {searchTerm && (
-                <Button variant="outline-secondary" onClick={() => setSearchTerm("")}>
-                  <X size={18} />
-                </Button>
-              )}
-            </InputGroup>
-          </Col>
-          <Col md={4}>
-            <Dropdown>
-              <Dropdown.Toggle variant="outline-secondary" size="sm">
-                <BarChart3 size={14} className="me-1" />
-                Sort:{" "}
-                {sortBy === "dueDate" ? "Due Date" : sortBy === "riskScore" ? "Risk" : "Priority"}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => setSortBy("dueDate")}>Due Date</Dropdown.Item>
-                <Dropdown.Item onClick={() => setSortBy("riskScore")}>Risk Score</Dropdown.Item>
-                <Dropdown.Item onClick={() => setSortBy("priority")}>Priority</Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Item onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}>
-                  Toggle Order ({sortOrder === "asc" ? "Ascending" : "Descending"})
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </Col>
-          <Col md={3}>
-            <div className="d-flex gap-2 justify-content-end flex-wrap">
-              {["ALL", "TODAY", "UPCOMING", "OVERDUE", "HIGH_RISK", "COMPLETED"].map((type) => (
-                <Button
-                  key={type}
-                  variant={filterType === type ? "primary" : "outline-primary"}
-                  size="sm"
-                  onClick={() => setFilterType(type)}
+        {/* Search, sort, and filters — single toolbar row */}
+        <Row className="dash-section g-3">
+          <Col xs={12}>
+            <div className="dash-toolbar">
+              <InputGroup className="dash-toolbar-control dash-toolbar-search">
+                <InputGroup.Text className="bg-white border-end-0 d-inline-flex align-items-center">
+                  <Search size={16} className="text-muted" />
+                </InputGroup.Text>
+                <Form.Control
+                  type="text"
+                  placeholder="Search tasks..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border-start-0 dash-body"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="outline-secondary"
+                    className="dash-btn-icon"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    <X size={16} />
+                  </Button>
+                )}
+              </InputGroup>
+
+              <Dropdown className="dash-toolbar-sort">
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  className="dash-btn-icon dash-toolbar-control w-100"
                 >
-                  {type === "ALL" && "All Active"}
-                  {type === "TODAY" && `Today (${getFilterCount("TODAY")})`}
-                  {type === "UPCOMING" && `Upcoming (${getFilterCount("UPCOMING")})`}
-                  {type === "OVERDUE" && `Overdue (${getFilterCount("OVERDUE")})`}
-                  {type === "HIGH_RISK" && `High Risk (${getFilterCount("HIGH_RISK")})`}
-                  {type === "COMPLETED" && `Completed (${getFilterCount("COMPLETED")})`}
-                </Button>
-              ))}
+                  <BarChart3 size={14} />
+                  <span className="text-truncate">
+                    Sort:{" "}
+                    {sortBy === "dueDate"
+                      ? "Due Date"
+                      : sortBy === "riskScore"
+                        ? "Risk"
+                        : "Priority"}
+                  </span>
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => setSortBy("dueDate")}>Due Date</Dropdown.Item>
+                  <Dropdown.Item onClick={() => setSortBy("riskScore")}>Risk Score</Dropdown.Item>
+                  <Dropdown.Item onClick={() => setSortBy("priority")}>Priority</Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  >
+                    Toggle Order ({sortOrder === "asc" ? "Ascending" : "Descending"})
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+
+              <div className="dash-filter-bar">
+                {["ALL", "TODAY", "UPCOMING", "OVERDUE", "HIGH_RISK", "COMPLETED"].map((type) => {
+                  const filterClass = {
+                    ALL: "filter-chip filter-chip--primary",
+                    TODAY: "filter-chip filter-chip--primary",
+                    UPCOMING: "filter-chip filter-chip--primary",
+                    OVERDUE: "filter-chip filter-chip--danger",
+                    HIGH_RISK: "filter-chip filter-chip--warning",
+                    COMPLETED: "filter-chip filter-chip--success",
+                  }[type];
+                  const isActive = filterType === type;
+                  return (
+                    <Button
+                      key={type}
+                      variant="outline-secondary"
+                      size="sm"
+                      className={`dash-btn-icon ${filterClass}${isActive ? " is-active" : ""}`}
+                      onClick={() => setFilterType(type)}
+                    >
+                      {type === "ALL" && "All Active"}
+                      {type === "TODAY" && `Today (${getFilterCount("TODAY")})`}
+                      {type === "UPCOMING" && `Upcoming (${getFilterCount("UPCOMING")})`}
+                      {type === "OVERDUE" && `Overdue (${getFilterCount("OVERDUE")})`}
+                      {type === "HIGH_RISK" && `High Risk (${getFilterCount("HIGH_RISK")})`}
+                      {type === "COMPLETED" && `Completed (${getFilterCount("COMPLETED")})`}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </Col>
         </Row>
 
-        {/* Main Content */}
-        <Row>
-          <Col lg={4}>
-            <FailurePredictionCard predictions={failurePredictions} />
+        {/* Main Content — 4 + 8 (full width when sidebar empty) */}
+        <Row className="g-3 align-items-start">
+          {showSidebar && (
+            <Col xs={12} lg={4} className="d-flex flex-column gap-3">
+              <FailurePredictionCard predictions={failurePredictions} />
 
-            {highRiskTasks.length > 0 && (
-              <Card className="shadow-sm mb-4 border-danger">
-                <Card.Header className="bg-danger text-white">
-                  <div className="d-flex align-items-center gap-2">
-                    <AlertOctagon size={18} />
-                    <h6 className="mb-0 fw-semibold">Critical Alerts</h6>
-                    <Badge bg="light" text="danger" pill className="ms-auto">
-                      {highRiskTasks.length}
-                    </Badge>
-                  </div>
-                </Card.Header>
-                <ListGroup variant="flush">
-                  {highRiskTasks.slice(0, 3).map((task) => (
-                    <ListGroup.Item
-                      key={task.id}
-                      action
-                      onClick={() => navigate(`/task/${task.id}`)}
-                      className="py-3"
-                    >
-                      <div className="d-flex justify-content-between">
-                        <div>
-                          <div className="d-flex align-items-center gap-2 mb-1">
-                            <span>{getCategoryIcon(task.category)}</span>
-                            <span className="fw-semibold">{task.title}</span>
+              {highRiskTasks.length > 0 && (
+                <Card className="shadow-sm mb-0 dash-alert-card">
+                  <Card.Header className="dash-alert-card__header text-white dash-card-header">
+                    <div className="d-flex align-items-center gap-2">
+                      <AlertOctagon size={16} className="flex-shrink-0" />
+                      <h6 className="mb-0 dash-card-title text-truncate">Critical Alerts</h6>
+                      <Badge bg="light" text="dark" pill className="ms-auto flex-shrink-0">
+                        {highRiskTasks.length}
+                      </Badge>
+                    </div>
+                  </Card.Header>
+                  <ListGroup variant="flush">
+                    {highRiskTasks.slice(0, 3).map((task) => (
+                      <ListGroup.Item
+                        key={task.id}
+                        action
+                        onClick={() => navigate(`/task/${task.id}`)}
+                        className="dash-list-item"
+                      >
+                        <div className="d-flex justify-content-between align-items-center gap-2">
+                          <div className="min-w-0 flex-grow-1">
+                            <div className="d-flex align-items-center gap-2 mb-2 min-w-0">
+                              <span className="lh-1 flex-shrink-0">
+                                {getCategoryIcon(task.category)}
+                              </span>
+                              <span className="fw-semibold dash-body text-truncate">
+                                {task.title}
+                              </span>
+                            </div>
+                            <div className="d-flex flex-wrap gap-2 gap-md-3 dash-meta text-muted">
+                              <span className="text-nowrap">Due: {formatDate(task.dueDate)}</span>
+                              <span className="text-danger text-nowrap">
+                                {getDaysRemaining(task.dueDate)}
+                              </span>
+                            </div>
                           </div>
-                          <div className="d-flex gap-3 small text-muted">
-                            <span>Due: {formatDate(task.dueDate)}</span>
-                            <span className="text-danger">{getDaysRemaining(task.dueDate)}</span>
-                          </div>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            className="dash-btn-icon flex-shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewImpact(task);
+                            }}
+                          >
+                            Impact
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewImpact(task);
-                          }}
-                        >
-                          Impact
-                        </Button>
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </Card>
-            )}
-          </Col>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                </Card>
+              )}
+            </Col>
+          )}
 
-          <Col lg={8}>
-            <Card className="shadow-sm">
-              <Card.Header className="bg-white d-flex justify-content-between align-items-center py-3">
-                <div>
-                  <h5 className="mb-0 fw-semibold">
+          <Col xs={12} lg={showSidebar ? 8 : 12}>
+            <Card className="shadow-sm h-100 dash-tasks-card">
+              <Card.Header className="d-flex justify-content-between align-items-center dash-card-header gap-2">
+                <div className="min-w-0">
+                  <h5 className="dash-section-title text-truncate">
                     {filterType === "ALL" && "Active Tasks"}
                     {filterType === "TODAY" && "Today's Tasks"}
                     {filterType === "UPCOMING" && "Upcoming Tasks"}
@@ -636,11 +708,11 @@ const Dashboard = () => {
                     {filterType === "HIGH_RISK" && "High Risk Tasks"}
                     {filterType === "COMPLETED" && "Completed Tasks"}
                   </h5>
-                  <small className="text-muted">{filteredTasks.length} tasks found</small>
+                  <small className="text-muted dash-meta">
+                    {filteredTasks.length}{" "}
+                    {filteredTasks.length === 1 ? "task" : "tasks"} found
+                  </small>
                 </div>
-                <Badge bg="primary" pill>
-                  {filteredTasks.length}
-                </Badge>
               </Card.Header>
               <Card.Body className="p-0">
                 {filteredTasks.length > 0 ? (
@@ -650,56 +722,70 @@ const Dashboard = () => {
                         key={task.id}
                         action
                         onClick={() => navigate(`/task/${task.id}`)}
-                        className="py-3"
+                        className="dash-list-item"
                       >
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="flex-grow-1">
-                            <div className="d-flex align-items-center gap-2 mb-2">
-                              <span className="fs-5">{getCategoryIcon(task.category)}</span>
-                              <h6 className="mb-0 fw-semibold">{task.title}</h6>
-                              {getRiskBadge(task.riskAnalysis?.riskLevel, task.riskAnalysis?.riskScore)}
+                        <div className="dash-task-row d-flex justify-content-between align-items-start gap-3">
+                          <div className="flex-grow-1 min-w-0">
+                            <div className="d-flex align-items-start gap-2 mb-2">
+                              <span className="lh-1 fs-5 flex-shrink-0 mt-1">
+                                {getCategoryIcon(task.category)}
+                              </span>
+                              <div className="min-w-0 flex-grow-1">
+                                <div className="d-flex align-items-center flex-wrap gap-2">
+                                  <h6 className="dash-card-title mb-0">{task.title}</h6>
+                                  {getRiskBadge(
+                                    task.riskAnalysis?.riskLevel,
+                                    task.riskAnalysis?.riskScore,
+                                  )}
+                                  {getPriorityBadge(task.priority)}
+                                </div>
+                              </div>
                             </div>
                             {task.description && (
-                              <p className="text-muted small mb-2">
+                              <p className="text-muted dash-body mb-2 dash-task-desc">
                                 {task.description.length > 100
                                   ? task.description.substring(0, 100) + "..."
                                   : task.description}
                               </p>
                             )}
-                            <div className="d-flex flex-wrap gap-3">
-                              <small className="text-muted d-flex align-items-center gap-1">
-                                <Calendar size={12} /> {formatDate(task.dueDate)}
+                            <div className="d-flex flex-wrap gap-2 gap-md-3 align-items-center">
+                              <small className="text-muted dash-icon-text dash-meta">
+                                <Calendar size={12} />
+                                {formatDate(task.dueDate)}
                               </small>
-                              <small className="text-muted d-flex align-items-center gap-1">
-                                <Clock size={12} /> {getDaysRemaining(task.dueDate)}
+                              <small className="text-muted dash-icon-text dash-meta">
+                                <Clock size={12} />
+                                {getDaysRemaining(task.dueDate)}
                               </small>
-                              {getPriorityBadge(task.priority)}
                             </div>
                           </div>
-                          <div className="text-end ms-3">
+                          <div className="dash-action-stack">
                             {task.status !== "COMPLETED" && (
                               <Button
                                 variant="success"
                                 size="sm"
+                                className="dash-btn-icon"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setTaskToComplete(task);
                                   setShowCompleteModal(true);
                                 }}
                               >
-                                <CheckCircle size={14} className="me-1" /> Complete
+                                <CheckCircle size={14} />
+                                Complete
                               </Button>
                             )}
                             <Button
                               variant="outline-info"
                               size="sm"
-                              className="mt-2"
+                              className="dash-btn-icon"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleViewImpact(task);
                               }}
                             >
-                              <Eye size={14} className="me-1" /> Impact
+                              <Eye size={14} />
+                              Impact
                             </Button>
                           </div>
                         </div>
@@ -707,16 +793,35 @@ const Dashboard = () => {
                     ))}
                   </ListGroup>
                 ) : (
-                  <div className="text-center py-5">
+                  <div className="text-center py-5 px-3">
                     <Clock size={48} className="text-muted mb-3" />
-                    <h6 className="text-muted">No tasks in this category</h6>
-                    <Button
-                      variant="primary"
-                      onClick={() => navigate("/create-task")}
-                      className="mt-2"
-                    >
-                      <Plus size={18} className="me-2" /> Create your first task
-                    </Button>
+                    <h6 className="text-muted dash-card-title mb-2">
+                      {filterType === "ALL" && "No active tasks"}
+                      {filterType === "TODAY" && "Nothing due today"}
+                      {filterType === "UPCOMING" && "No upcoming tasks"}
+                      {filterType === "OVERDUE" && "No overdue tasks"}
+                      {filterType === "HIGH_RISK" && "No high-risk tasks"}
+                      {filterType === "COMPLETED" && "No completed tasks yet"}
+                    </h6>
+                    {(filterType === "ALL" || filterType === "COMPLETED") && (
+                      <Button
+                        variant="primary"
+                        className="dash-btn-icon mt-2"
+                        onClick={() => navigate("/create-task")}
+                      >
+                        <Plus size={16} />
+                        Create a task
+                      </Button>
+                    )}
+                    {filterType !== "ALL" && filterType !== "COMPLETED" && (
+                      <Button
+                        variant="outline-primary"
+                        className="dash-btn-icon mt-2"
+                        onClick={() => setFilterType("ALL")}
+                      >
+                        View all active
+                      </Button>
+                    )}
                   </div>
                 )}
               </Card.Body>
@@ -753,8 +858,8 @@ const Dashboard = () => {
           <Button variant="secondary" onClick={() => setShowCompleteModal(false)}>
             Cancel
           </Button>
-          <Button variant="success" onClick={handleCompleteTask}>
-            <CheckCircle className="me-1" /> Complete Task
+          <Button variant="success" className="dash-btn-icon" onClick={handleCompleteTask}>
+            <CheckCircle size={16} /> Complete Task
           </Button>
         </Modal.Footer>
       </Modal>

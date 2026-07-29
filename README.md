@@ -4,6 +4,9 @@ AI-assisted personal time management for students and early-career professionals
 
 TimelySync helps you plan work across academics, opportunities, and personal goals — then flags tasks that are likely to slip before the deadline hits.
 
+**Live deploy (Render):** see `render.yaml`  
+**Repo:** https://github.com/vutkuriakshitha/TimelySync-AI
+
 ---
 
 ## What it does
@@ -19,14 +22,12 @@ TimelySync helps you plan work across academics, opportunities, and personal goa
 
 ## Architecture
 
-Three services, one MongoDB:
-
-| Layer | Tech | Port |
-|-------|------|------|
-| Frontend | React 19, React Router, Bootstrap, Recharts | `3000` |
-| Backend | Java 21, Spring Boot 3.4, Spring Security + JWT | `8080` |
-| AI service | Python, FastAPI, scikit-learn, pdfplumber / Tesseract | `8000` |
-| Database | MongoDB Atlas (or local MongoDB) | — |
+| Layer | Tech | Local port | Render service |
+|-------|------|------------|----------------|
+| Frontend | React 19, Bootstrap, Recharts | `3000` | `timelysync-frontend` |
+| Backend | Java 21, Spring Boot 3.4, JWT | `8080` | `timelysync-api` |
+| AI | FastAPI, scikit-learn, OCR | `8010` / `8000` | `timelysync-ai` |
+| DB | MongoDB Atlas (or local) | — | Atlas URI |
 
 ```
 React UI ──► Spring Boot API ──► MongoDB
@@ -34,23 +35,9 @@ React UI ──► Spring Boot API ──► MongoDB
                  └──► FastAPI (predictions / OCR)
 ```
 
-The Java backend owns auth and business logic. It calls the AI service over an internal API key. If the AI service is down, the backend falls back to conservative estimates instead of failing hard.
-
 ---
 
-## Project layout
-
-```
-PROJECT2/
-├── timelysyncc-frontend/     # React SPA
-├── timelysync-backend/
-│   └── timelysync-backend/   # Spring Boot app
-└── ai-service/               # FastAPI + trained models
-```
-
----
-
-## Quick start
+## Quick start (local)
 
 ### Prerequisites
 
@@ -58,14 +45,15 @@ PROJECT2/
 - Java 21 + Maven
 - Python 3.10+
 - MongoDB (local or Atlas)
-- Optional for OCR: [Tesseract](https://github.com/tesseract-ocr/tesseract)
+- For OCR: [Tesseract](https://github.com/tesseract-ocr/tesseract) **and** [Poppler](https://github.com/oschwartz10612/poppler-windows/releases) (scanned PDFs)
 
 ### 1. Backend
 
 ```bash
 cd timelysync-backend/timelysync-backend
 cp .env.example .env
-# edit MONGODB_URI, JWT_SECRET, AI_INTERNAL_API_KEY
+# set MONGODB_URI, JWT_SECRET, AI_INTERNAL_API_KEY
+# optional: MAIL_* for real forgot-password emails
 ./mvnw spring-boot:run
 ```
 
@@ -74,17 +62,14 @@ cp .env.example .env
 ```bash
 cd ai-service
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
+.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 cp .env.example .env
-# edit MONGODB_URI + AI_INTERNAL_API_KEY (same key as backend)
+# same AI_INTERNAL_API_KEY as backend
 
-python -m app.training.train_all
-uvicorn app.main:app --reload --port 8000
+python -m app.training.train_all   # skip if models/ already has .joblib files
+uvicorn app.main:app --reload --port 8010
 ```
-
-Health check: `GET http://localhost:8000/health`
 
 ### 3. Frontend
 
@@ -95,49 +80,44 @@ npm install
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000
 
 ---
 
-## AI models
+## Auth & email
 
-Trained scikit-learn pipelines (not hand-tuned if/else rules):
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /predict/failure` | Task failure-risk probability |
-| `POST /predict/impact` | Deadline-miss impact severity |
-| `POST /predict/postanalysis` | Root cause of a late completion |
-| `POST /predict/intake` | Category + priority from free text |
-| `POST /predict/deadline-extraction` | Deadlines from pasted notice text |
-| `POST /predict/document-deadlines` | PDF/image → OCR → deadlines |
-
-Models ship trained on structured synthetic data that mirrors real time-management patterns. Outcomes reported back via `POST /feedback/outcome` are stored for future retraining on real usage.
+- Register / login / reset-password work end-to-end
+- Forgot-password **tries SMTP first**
+- If SMTP fails (or `MAIL_ENABLED=false`), an in-app reset link is returned when `ALLOW_IN_APP_RESET_FALLBACK=true` (default for demos)
+- For real inbox delivery: set Gmail App Password **or** Brevo SMTP in `.env` / Render secrets, then set `ALLOW_IN_APP_RESET_FALLBACK=false`
 
 ---
 
-## Security notes
+## OCR notes
 
-- JWT auth on the API
-- Shared `AI_INTERNAL_API_KEY` between backend and AI service
-- `.env` files are gitignored — copy from `.env.example` locally
-- Never commit real MongoDB / JWT / SMTP credentials
-
----
-
-## Tech highlights (for reviewers)
-
-- Clean split between product API (Spring) and ML inference (FastAPI)
-- Graceful AI degradation on the backend
-- OCR pipeline for real-world notice documents
-- Feedback loop designed for later model refresh
-- Protected React routes + account/session handling
+- Supported: **PDF, PNG, JPG, WEBP, TIFF** (not Word `.docx`)
+- Text PDFs work with pdfplumber alone
+- Scanned PDFs need Poppler + Tesseract
+- On Render free tier, wake AI first: `GET https://timelysync-ai.onrender.com/health` before uploading a document
 
 ---
 
-## Status
+## Deploy (Render)
 
-Local full-stack project. Backend and AI expect a reachable MongoDB URI. Train models once before first AI startup.
+`render.yaml` defines three free services. Required secrets:
+
+- `MONGODB_URI` (Atlas)
+- Optional: `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_ENABLED=true`
+
+Frontend build uses `REACT_APP_API_URL=https://timelysync-api.onrender.com/api`.
+
+---
+
+## Security
+
+- JWT on the API
+- Shared `AI_INTERNAL_API_KEY` between backend and AI
+- Never commit real `.env` / Atlas / SMTP secrets
 
 ---
 

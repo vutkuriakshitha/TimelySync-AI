@@ -1,5 +1,6 @@
 package com.timelysync.service;
 
+import jakarta.mail.AuthenticationFailedException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
@@ -7,16 +8,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * Transactional email (welcome + password reset).
- * {@link #sendPasswordResetEmail} returns whether SMTP accepted the message so
- * AuthService can return an in-app reset link when mail is unavailable.
+ * Gmail SMTP delivery for welcome + password-reset emails.
+ * Credentials come only from environment / .env (via Spring properties).
  */
 @Service
 public class EmailService {
@@ -29,8 +32,14 @@ public class EmailService {
     @Value("${spring.mail.host:}")
     private String mailHost;
 
+    @Value("${spring.mail.port:587}")
+    private int mailPort;
+
     @Value("${spring.mail.username:}")
     private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
 
     @Value("${timelysync.app.mailFrom:}")
     private String mailFrom;
@@ -41,22 +50,30 @@ public class EmailService {
     @Value("${timelysync.app.mailEnabled:false}")
     private boolean mailEnabled;
 
-    @Value("${spring.mail.password:}")
-    private String mailPassword;
-
     public boolean isMailConfigured() {
-        return mailEnabled
-                && mailSender != null
+        boolean senderOk = mailSender instanceof JavaMailSenderImpl impl
+                && StringUtils.hasText(impl.getHost())
+                && StringUtils.hasText(impl.getUsername())
+                && impl.getPassword() != null
+                && !impl.getPassword().isBlank();
+
+        boolean propsOk = mailEnabled
                 && StringUtils.hasText(mailHost)
                 && StringUtils.hasText(mailUsername)
                 && StringUtils.hasText(mailPassword);
+
+        logger.debug("isMailConfigured: mailEnabled={} propsOk={} senderOk={} host={} user={} passwordLength={}",
+                mailEnabled, propsOk, senderOk, mailHost, mailUsername,
+                mailPassword == null ? 0 : mailPassword.replace(" ", "").length());
+
+        return propsOk && mailSender != null && senderOk;
     }
 
     private String fromAddress() {
         if (StringUtils.hasText(mailFrom)) {
-            return mailFrom;
+            return mailFrom.trim();
         }
-        return mailUsername;
+        return mailUsername == null ? "" : mailUsername.trim();
     }
 
     public String buildPasswordResetLink(String resetToken) {
@@ -64,16 +81,21 @@ public class EmailService {
     }
 
     /**
-     * Attempts SMTP delivery. Returns true only when the provider accepted the message.
-     * Kept synchronous so forgot-password can fall back immediately on failure.
+     * Sends the password-reset email over Gmail SMTP.
+     * Does not alter token generation — caller supplies the raw token.
      */
-    public boolean sendPasswordResetEmail(String toEmail, String resetToken) {
+    public MailSendResult sendPasswordResetEmail(String toEmail, String resetToken) {
         String resetLink = buildPasswordResetLink(resetToken);
 
         if (!isMailConfigured()) {
-            logger.warn("SMTP not configured — AuthService may return in-app reset link for {}", toEmail);
-            return false;
+            String msg = "Gmail SMTP is not configured. "
+                    + "Set MAIL_ENABLED=true and MAIL_HOST/MAIL_USERNAME/MAIL_PASSWORD in .env";
+            logger.error(msg);
+            return MailSendResult.fail(msg);
         }
+
+        logger.info("SMTP connect: host={} port={} user={} → to={}",
+                mailHost, mailPort, mailUsername, toEmail);
 
         String subject = "Reset your TimelySync password";
         String html = """
@@ -104,6 +126,7 @@ public class EmailService {
     @Async
     public void sendWelcomeEmail(String toEmail, String name) {
         if (!isMailConfigured()) {
+            logger.warn("Skipping welcome email to {} — Gmail SMTP not configured", toEmail);
             return;
         }
 
@@ -125,11 +148,17 @@ public class EmailService {
                 """.formatted(escapeHtml(safeName), loginUrl);
 
         String text = "Welcome to TimelySync, " + safeName + "!\n\nSign in: " + loginUrl + "\n";
-        send(toEmail, subject, text, html);
+        MailSendResult result = send(toEmail, subject, text, html);
+        if (!result.success()) {
+            logger.error("Welcome email failed for {}: {}", toEmail, result.error());
+        }
     }
 
-    private boolean send(String toEmail, String subject, String text, String html) {
+    private MailSendResult send(String toEmail, String subject, String text, String html) {
         try {
+            logger.info("SMTP auth + send starting (subject=\"{}\", from={}, to={})",
+                    subject, fromAddress(), toEmail);
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(fromAddress());
@@ -137,15 +166,55 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(text, html);
             mailSender.send(message);
-            logger.info("Email sent to {} subject=\"{}\"", toEmail, subject);
-            return true;
+
+            logger.info("SMTP send SUCCESS to {} subject=\"{}\"", toEmail, subject);
+            return MailSendResult.ok();
+        } catch (MailAuthenticationException | AuthenticationFailedException ex) {
+            String detail = flattenMailError(ex);
+            logger.error("SMTP AUTHENTICATION FAILED for user={} host={} port={}: {}",
+                    mailUsername, mailHost, mailPort, detail);
+            return MailSendResult.fail("Gmail SMTP authentication failed: " + detail);
         } catch (MessagingException ex) {
-            logger.error("Failed to build email to {}: {}", toEmail, ex.getMessage());
-            return false;
+            String detail = flattenMailError(ex);
+            logger.error("SMTP MESSAGING ERROR to {}: {}", toEmail, detail);
+            return MailSendResult.fail("Gmail SMTP messaging error: " + detail);
+        } catch (MailException ex) {
+            String detail = flattenMailError(ex);
+            logger.error("SMTP MAIL ERROR to {}: {}", toEmail, detail);
+            return MailSendResult.fail("Gmail SMTP error: " + detail);
         } catch (Exception ex) {
-            logger.error("Failed to send email to {}: {}", toEmail, ex.getMessage());
-            return false;
+            logger.error("SMTP UNEXPECTED ERROR to {}: {}", toEmail, ex.toString());
+            return MailSendResult.fail("Gmail SMTP unexpected error: " + ex.getMessage());
         }
+    }
+
+    /** Walk nested JavaMail exceptions so Google's SMTP reply is visible. */
+    static String flattenMailError(Throwable ex) {
+        StringBuilder sb = new StringBuilder();
+        Throwable current = ex;
+        int depth = 0;
+        while (current != null && depth < 8) {
+            if (sb.length() > 0) {
+                sb.append(" | caused by: ");
+            }
+            String msg = current.getMessage();
+            sb.append(current.getClass().getSimpleName());
+            if (StringUtils.hasText(msg)) {
+                sb.append(": ").append(msg.trim());
+            }
+            if (current instanceof MessagingException messaging) {
+                Exception next = messaging.getNextException();
+                if (next != null && next != current.getCause()) {
+                    sb.append(" | smtp: ").append(next.getClass().getSimpleName());
+                    if (StringUtils.hasText(next.getMessage())) {
+                        sb.append(": ").append(next.getMessage().trim());
+                    }
+                }
+            }
+            current = current.getCause();
+            depth++;
+        }
+        return sb.toString();
     }
 
     private static String escapeHtml(String value) {

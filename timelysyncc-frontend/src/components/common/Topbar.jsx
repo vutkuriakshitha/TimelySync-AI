@@ -1,11 +1,10 @@
 // src/components/common/Topbar.jsx
 import React, { useContext, useEffect, useRef, useState, useCallback } from "react";
 import { Navbar, Container, Nav, Dropdown, Badge, Image, Modal } from "react-bootstrap";
-import { Bell, User, LogOut, Settings as SettingsIcon, Users, Moon, Sun, AlertTriangle, Award, Info, Zap, CheckCircle } from "lucide-react";
+import { Bell, User, LogOut, Settings as SettingsIcon, Moon, Sun, AlertTriangle, Award, Info, Zap, CheckCircle, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import notificationService from "../../services/notificationService";
-import AccountSwitcher from "../dashboard/AccountSwitcher";
 import QuickActions from "../dashboard/QuickActions";
 
 const POLL_MS = Number(process.env.REACT_APP_NOTIFICATIONS_POLL_MS) || 30000;
@@ -24,14 +23,13 @@ const notificationIcon = (type) => {
   }
 };
 
-const Topbar = () => {
-  const { user, logout, switchAccount, availableAccounts } = useContext(AuthContext);
+const Topbar = ({ onMenuClick }) => {
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [darkMode, setDarkMode] = useState(localStorage.getItem("darkMode") === "true");
   const notificationRef = useRef(null);
@@ -94,38 +92,28 @@ const Topbar = () => {
     await logout();
   };
 
-  const handleSwitchAccount = async (accountId) => {
-    await switchAccount(accountId);
-    setShowAccountSwitcher(false);
-  };
-
   return (
     <>
       {showQuickActions && (
-        <div
-          className="position-fixed start-0 top-0 h-100 bg-white shadow-lg"
-          style={{ width: "300px", zIndex: 1040, marginTop: "60px" }}
-        >
+        <div className="position-fixed start-0 top-0 h-100 bg-white shadow-lg app-quick-actions">
           <QuickActions onClose={() => setShowQuickActions(false)} />
         </div>
       )}
 
-      <Navbar
-        bg="white"
-        className="shadow-sm px-3 position-fixed"
-        style={{
-          marginLeft: "250px",
-          width: "calc(100% - 250px)",
-          zIndex: 999,
-          top: 0,
-          height: "60px",
-        }}
-      >
-        <Container fluid>
-          <Navbar.Text className="fw-semibold">
-            Welcome back, {user?.name || "User"}! 👋
-          </Navbar.Text>
-          <Nav className="ms-auto align-items-center gap-2">
+      <Navbar className="px-3 position-fixed app-topbar">
+        <Container fluid className="h-100 d-flex align-items-center justify-content-end gap-2 pe-0">
+          {onMenuClick && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm d-lg-none dash-btn-icon me-auto"
+              onClick={onMenuClick}
+              aria-label="Open navigation"
+              title="Menu"
+            >
+              <Menu size={16} />
+            </button>
+          )}
+          <Nav className="app-topbar-actions align-items-center gap-2 flex-shrink-0">
             <button
               type="button"
               className="btn btn-outline-primary btn-sm"
@@ -164,8 +152,7 @@ const Topbar = () => {
 
               {showNotifications && (
                 <div
-                  className="position-absolute end-0 mt-2 bg-white shadow-lg rounded border"
-                  style={{ width: "340px", zIndex: 1050 }}
+                  className="position-absolute end-0 mt-2 bg-white shadow-lg rounded border app-notifications-panel"
                 >
                   <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
                     <span className="fw-semibold">Notifications</span>
@@ -239,9 +226,6 @@ const Topbar = () => {
                 <Dropdown.Item onClick={() => navigate("/profile")}>
                   <User size={14} className="me-2" /> Profile
                 </Dropdown.Item>
-                <Dropdown.Item onClick={() => setShowAccountSwitcher(true)}>
-                  <Users size={14} className="me-2" /> Switch Account
-                </Dropdown.Item>
                 <Dropdown.Item onClick={() => navigate("/settings")}>
                   <SettingsIcon size={14} className="me-2" /> Settings
                 </Dropdown.Item>
@@ -272,19 +256,6 @@ const Topbar = () => {
             Logout
           </button>
         </Modal.Footer>
-      </Modal>
-
-      <Modal show={showAccountSwitcher} onHide={() => setShowAccountSwitcher(false)} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Switch Account</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <AccountSwitcher
-            accounts={availableAccounts}
-            currentAccount={user}
-            onSwitch={handleSwitchAccount}
-          />
-        </Modal.Body>
       </Modal>
     </>
   );

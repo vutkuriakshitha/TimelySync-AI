@@ -7,6 +7,8 @@ const CognitiveLoadWarning = ({
   activeCount,
   warningMessage,
   maxCapacity = 5,
+  onViewTasks,
+  onPrioritize,
 }) => {
   const loadPercentage = Math.min((activeCount / maxCapacity) * 100, 100);
   const isOverCapacity = activeCount >= maxCapacity;
@@ -18,17 +20,17 @@ const CognitiveLoadWarning = ({
   };
 
   return (
-    <Alert variant={getLoadColor()} className="mb-4 border-0 shadow-sm">
+    <Alert variant={getLoadColor()} className="mb-0 border-0 shadow-sm p-3">
       <div className="d-flex align-items-start gap-3">
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 d-inline-flex align-items-center mt-1">
           {isOverCapacity ? (
-            <AlertTriangle size={32} className="text-danger" />
+            <AlertTriangle size={24} className="text-danger" />
           ) : (
-            <CheckCircle size={32} className="text-success" />
+            <CheckCircle size={24} className="text-success" />
           )}
         </div>
-        <div className="flex-grow-1">
-          <h6 className="fw-semibold mb-1">
+        <div className="flex-grow-1 min-w-0">
+          <h6 className="dash-card-title mb-2">
             Cognitive Load: {activeCount} / {maxCapacity} Active Tasks
           </h6>
           <ProgressBar
@@ -37,18 +39,29 @@ const CognitiveLoadWarning = ({
             className="mb-2"
             style={{ height: "8px" }}
           />
-          {warningMessage && <p className="mb-2 small">{warningMessage}</p>}
+          {warningMessage && <p className="mb-2 dash-body">{warningMessage}</p>}
           {isOverCapacity ? (
-            <div className="d-flex gap-2">
-              <Button size="sm" variant="danger">
+            <div className="d-flex flex-wrap gap-2 align-items-center">
+              <Button
+                size="sm"
+                variant="danger"
+                className="dash-btn-icon"
+                onClick={onViewTasks}
+              >
                 View Active Tasks
               </Button>
-              <Button size="sm" variant="outline-danger">
-                <ArrowRight size={14} /> Review & Prioritize
+              <Button
+                size="sm"
+                variant="outline-danger"
+                className="dash-btn-icon"
+                onClick={onPrioritize}
+              >
+                <ArrowRight size={14} />
+                Review & Prioritize
               </Button>
             </div>
           ) : (
-            <p className="mb-0 small text-muted">
+            <p className="mb-0 dash-meta text-muted">
               You have capacity for {maxCapacity - activeCount} more task
               {maxCapacity - activeCount !== 1 ? "s" : ""}
             </p>
