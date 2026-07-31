@@ -105,15 +105,18 @@ Open http://localhost:3000
 
 ## Deploy
 
-Preferred free long-term setup (no sleep):
+**All 3 free (recommended now):**
 
-1. **MongoDB Atlas** — keep your existing cluster  
-2. **Oracle Cloud Always Free** — run API + AI with `docker compose`  
-3. **Vercel** — host the React frontend  
+| Service | Host |
+|---------|------|
+| Frontend | Vercel |
+| API | Render |
+| AI | Render |
+| DB | MongoDB Atlas |
 
 Full steps: **[DEPLOY.md](./DEPLOY.md)**
 
-`render.yaml` remains for the old Render free stack (services sleep after idle).
+Oracle Always Free VM path remains under `deploy/oracle/` if you get card verification later.
 
 ---
 

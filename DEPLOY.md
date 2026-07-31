@@ -1,118 +1,106 @@
-# Deploy TimelySync (free long-term)
+# Deploy TimelySync — all 3 free
 
-**Stack**
-- Frontend → [Vercel](https://vercel.com) (free, no sleep)
-- API + AI → [Oracle Cloud Always Free](https://www.oracle.com/cloud/free/) Ampere VM + Docker Compose
-- Database → MongoDB Atlas (keep what you already have)
+**Stack (no Oracle needed)**
+
+| Piece | Host | URL pattern |
+|-------|------|-------------|
+| Frontend | [Vercel](https://vercel.com) free | `https://….vercel.app` |
+| API | [Render](https://dashboard.render.com) free | `https://timelysync-api.onrender.com` |
+| AI | Render free | `https://timelysync-ai.onrender.com` |
+| DB | MongoDB Atlas free | your existing cluster |
+
+> Free Render services **sleep after ~15 min idle**. First open can take 1–2 minutes. Wake AI before Smart Intake: open `https://timelysync-ai.onrender.com/health`.
 
 ---
 
-## 1) Oracle Cloud VM
+## A) Render — API + AI (keep / fix existing)
 
-1. Sign up: https://www.oracle.com/cloud/free/
-2. Create **Compute → Instance**
-   - Image: **Ubuntu 22.04**
-   - Shape: **VM.Standard.A1.Flex** (Ampere, Always Free)
-   - OCPUs: 2–4, Memory: 12–24 GB (within Always Free quota)
-   - Add SSH key; note the **public IP**
-3. **Networking → Subnet → Security List** ingress rules:
-   - TCP **22** (SSH)
-   - TCP **8080** (API) from `0.0.0.0/0`
-   - (Later) TCP **80/443** if you add Caddy + a domain
+You already have `timelysync-api` and `timelysync-ai` from `render.yaml`.
 
-### Install Docker on the VM
+1. Open [Render Dashboard](https://dashboard.render.com)
+2. Confirm both services exist and are **not suspended**
+3. On **each** service, set env:
 
-```bash
-ssh ubuntu@YOUR_PUBLIC_IP
+### `timelysync-ai`
+- `MONGODB_URI` = your Atlas URI (include `/timelysync`)
+- `AI_INTERNAL_API_KEY` = long random shared secret (same as API)
+- `CORS_ALLOWED_ORIGINS` = `https://YOUR_APP.vercel.app,https://timelysync-api.onrender.com`
+- `LOG_LEVEL` = `INFO`
 
-sudo apt-get update
-sudo apt-get install -y ca-certificates curl git
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker ubuntu
-# log out and back in so docker works without sudo
+### `timelysync-api`
+- `MONGODB_URI` = same Atlas URI
+- `JWT_SECRET` = long random (32+ chars)
+- `AI_INTERNAL_API_KEY` = **same** as AI
+- `AI_SERVICE_URL` = `https://timelysync-ai.onrender.com`
+- `FRONTEND_URL` = `https://YOUR_APP.vercel.app` (set after Vercel deploy)
+- `CORS_ALLOWED_ORIGINS` = `https://YOUR_APP.vercel.app`
+- `ALLOW_IN_APP_RESET_FALLBACK` = `true`
+- `MAIL_ENABLED` = `false` (unless you configure SMTP)
+
+4. **Manual Deploy → Deploy latest commit** on AI, then API
+5. Wait until both show **Live**
+6. Test:
+   - `https://timelysync-api.onrender.com/actuator/health`
+   - `https://timelysync-ai.onrender.com/health`
+
+Atlas → **Network Access**: allow `0.0.0.0/0` (or Render outbound IPs if you prefer).
+
+You can **suspend/delete** the old `timelysync-frontend` on Render — Vercel replaces it.
+
+---
+
+## B) Vercel — Frontend
+
+1. Go to https://vercel.com → sign in with GitHub  
+2. **Add New Project** → import `vutkuriakshitha/TimelySync-AI`  
+3. Settings:
+   - **Root Directory:** `timelysyncc-frontend`  
+   - **Framework Preset:** Create React App  
+   - **Build Command:** `npm run build`  
+   - **Output Directory:** `build`  
+4. **Environment Variables:**
+   - Name: `REACT_APP_API_URL`  
+   - Value: `https://timelysync-api.onrender.com/api`  
+5. Deploy  
+6. Copy the production URL, e.g. `https://timelysync-ai-xxxx.vercel.app`
+
+### Wire CORS to Vercel
+
+Back in Render → `timelysync-api` (and AI) → update:
+
+```text
+FRONTEND_URL=https://YOUR_REAL_VERCEL_URL
+CORS_ALLOWED_ORIGINS=https://YOUR_REAL_VERCEL_URL
 ```
 
-### Run API + AI
+(AI CORS can include the Vercel URL + API URL.)
 
-```bash
-git clone https://github.com/vutkuriakshitha/TimelySync-AI.git
-cd TimelySync-AI
-cp deploy/oracle/.env.example .env
-nano .env   # set MONGODB_URI, JWT_SECRET, AI_INTERNAL_API_KEY, FRONTEND_URL, CORS
-
-docker compose up -d --build
-docker compose ps
-curl http://127.0.0.1:8080/actuator/health
-```
-
-Public API base (until you add a domain):
-
-`http://YOUR_PUBLIC_IP:8080/api`
-
-Atlas Network Access: allow the VM public IP (or `0.0.0.0/0` for demos).
+Redeploy API (and AI if you changed its CORS).
 
 ---
 
-## 2) Frontend on Vercel
+## C) Use the app
 
-1. https://vercel.com → **Add New Project** → import `TimelySync-AI`
-2. Root Directory: `timelysyncc-frontend`
-3. Framework: Create React App (or Other)
-4. Build Command: `npm run build`
-5. Output Directory: `build`
-6. Environment variable:
-   - `REACT_APP_API_URL` = `http://YOUR_PUBLIC_IP:8080/api`  
-     (or `https://api.yourdomain.com/api` after HTTPS)
-7. Deploy → copy the `*.vercel.app` URL
+1. Open your **Vercel** URL (fast)  
+2. Sign up / log in  
+3. Before Smart Intake / OCR, wake AI once:  
+   `https://timelysync-ai.onrender.com/health`  
+4. Then use Smart Intake in the app  
 
-### Point API CORS at Vercel
-
-On the VM, edit `.env`:
-
-```env
-FRONTEND_URL=https://YOUR_APP.vercel.app
-CORS_ALLOWED_ORIGINS=https://YOUR_APP.vercel.app
-```
-
-```bash
-docker compose up -d --force-recreate api
-```
+Users appear in Atlas DB **`timelysync`** → collection **`users`**.
 
 ---
 
-## 3) Smoke test
+## Cold-start cheat sheet
 
-1. Open `https://YOUR_APP.vercel.app`
-2. Sign up / log in
-3. Create a task
-4. Smart Intake: wake is not needed (AI stays up on the VM)
-
-Check users in **Atlas** (same cluster as `MONGODB_URI`), DB **`timelysync`**, collection **`users`**.
-
----
-
-## Optional HTTPS (domain)
-
-1. Point `api.yourdomain.com` A record → VM IP
-2. Edit `deploy/oracle/Caddyfile` with your domain
-3. Uncomment the `caddy` service in `docker-compose.yml`
-4. `docker compose up -d`
-5. Set Vercel `REACT_APP_API_URL=https://api.yourdomain.com/api` and redeploy frontend
-6. Update `FRONTEND_URL` / `CORS_ALLOWED_ORIGINS`, recreate API
+| Service | Sleeps? | Wake |
+|---------|---------|------|
+| Vercel frontend | No | — |
+| Render API | Yes | Open site / hit `/actuator/health` |
+| Render AI | Yes | Hit `/health` before OCR |
 
 ---
 
-## Useful commands
+## Optional: still keep Oracle path
 
-```bash
-docker compose logs -f api
-docker compose logs -f ai
-docker compose pull   # after git pull + rebuild
-git pull && docker compose up -d --build
-```
-
----
-
-## Cost
-
-Oracle Always Free Ampere + Atlas free + Vercel free ≈ **$0 / month** if you stay in Always Free limits.
+See `deploy/oracle/` + `docker-compose.yml` if you get Always Free later (always-on API+AI).

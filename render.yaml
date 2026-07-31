@@ -19,7 +19,7 @@ services:
       - key: AI_INTERNAL_API_KEY
         generateValue: true
       - key: CORS_ALLOWED_ORIGINS
-        value: https://timelysync-frontend.onrender.com,https://timelysync-api.onrender.com
+        sync: false
       - key: LOG_LEVEL
         value: INFO
 
@@ -44,9 +44,9 @@ services:
       - key: AI_SERVICE_URL
         value: https://timelysync-ai.onrender.com
       - key: FRONTEND_URL
-        value: https://timelysync-frontend.onrender.com
+        sync: false
       - key: CORS_ALLOWED_ORIGINS
-        value: https://timelysync-frontend.onrender.com
+        sync: false
       - key: MAIL_ENABLED
         value: "false"
       - key: MAIL_HOST
@@ -66,6 +66,7 @@ services:
       - key: MAX_UPLOAD_SIZE_MB
         value: "15"
 
+  # Optional backup UI on Render. Preferred frontend is Vercel (see DEPLOY.md).
   - type: web
     name: timelysync-frontend
     runtime: node
