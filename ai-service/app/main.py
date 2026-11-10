@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import save_outcome_feedback, save_prediction
-from app.ml import deadline_extractor, failure_predictor, impact_predictor, intake_predictor, ocr_reader, postanalysis_predictor
+from app.ml import deadline_extractor, extraction_service, failure_predictor, impact_predictor, intake_predictor, ocr_reader, postanalysis_predictor
 from app.ml.model_registry import is_ready, reload as reload_models
 from app.schemas import (
     DeadlineExtractionResponse,
@@ -109,7 +109,7 @@ def predict_intake(request: IntakeRequest):
 )
 def predict_deadline_extraction(request: DeadlineTextRequest):
     try:
-        result = deadline_extractor.extract_deadlines(request.text, request.documentName)
+        result = extraction_service.extract(request.text, request.documentName)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     save_prediction("deadline_extraction", request.model_dump(), result.model_dump())
@@ -134,7 +134,7 @@ async def predict_document_deadlines(file: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
-        result = deadline_extractor.extract_deadlines(ocr_result["text"], file.filename)
+        result = extraction_service.extract(ocr_result["text"], file.filename)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

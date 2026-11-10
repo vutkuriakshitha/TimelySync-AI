@@ -5,6 +5,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load ai-service/.env into the process environment (real environment variables,
+# e.g. on Render, still take precedence). Everything below reads os.getenv.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / ".env", override=False)
+except ImportError:  # python-dotenv is listed in requirements.txt
+    pass
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

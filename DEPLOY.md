@@ -26,6 +26,15 @@ You already have `timelysync-api` and `timelysync-ai` from `render.yaml`.
 - `AI_INTERNAL_API_KEY` = long random shared secret (same as API)
 - `CORS_ALLOWED_ORIGINS` = `https://YOUR_APP.vercel.app,https://timelysync-api.onrender.com`
 - `LOG_LEVEL` = `INFO`
+- `LLM_PROVIDER` = `gemini` (or `openai` for Groq / any OpenAI-compatible API)
+- `LLM_API_KEY` = your key (free key from [Google AI Studio](https://aistudio.google.com) for Gemini)
+- `LLM_MODEL` = `gemini-3.8-flash` (or any model id your provider offers)
+- `LLM_BASE_URL` = only for `openai`, e.g. `https://api.groq.com/openai/v1`
+
+Without `LLM_API_KEY` the AI service still works using only the built-in ML pipeline, but it
+will not understand notice formats it was not trained on. Free-tier limits change, so check
+your provider's current limits page (Google AI Studio shows yours at `aistudio.google.com/rate-limit`).
+If the LLM is rate limited or down, uploads automatically fall back to the ML pipeline.
 
 ### `timelysync-api`
 - `MONGODB_URI` = same Atlas URI

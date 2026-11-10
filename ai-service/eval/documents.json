@@ -1,0 +1,55 @@
+[
+  {
+    "name": "college_workshop_circular",
+    "text": "CIRCULAR\nRef: CSE/2026/114\nDate: 9 November 2026\n\nSubject: Workshop on AI and Cloud Computing\n\nA one-day workshop on AI and Cloud Computing will be held on 20 November 2026 from 11:00 AM to 2:00 PM at Seminar Hall, Block A. Interested students must register before 17 November 2026.",
+    "gold": [
+      {"date": "2026-11-09", "kind": "document_date"},
+      {"date": "2026-11-20", "kind": "event"},
+      {"date": "2026-11-17", "kind": "deadline"}
+    ]
+  },
+  {
+    "name": "company_policy_email",
+    "text": "From: HR Team\nSubject: Updated leave policy\nSent: 02 Nov 2026\n\nHi all,\nThe revised leave policy comes into effect from 1 January 2027. Please acknowledge the policy on the HR portal by 30 November 2026. Questions can be sent to hr@example.com. The previous policy remains valid until 31 December 2026.",
+    "gold": [
+      {"date": "2026-11-02", "kind": "document_date"},
+      {"date": "2027-01-01", "kind": "info"},
+      {"date": "2026-11-30", "kind": "deadline"},
+      {"date": "2026-12-31", "kind": "info"}
+    ]
+  },
+  {
+    "name": "exam_fee_notice_with_late_fee",
+    "text": "UNIVERSITY EXAMINATION BRANCH\nNotification dated 12/11/2026\n\nStudents appearing for the End Semester Examinations (December 2026) shall pay the examination fee on or before 25-11-2026. Fee with a late fine of Rs. 500 can be paid up to 30-11-2026. The examinations will commence on 14-12-2026 and end on 24-12-2026. Hall tickets will be released on 08-12-2026.",
+    "gold": [
+      {"date": "2026-11-12", "kind": "document_date"},
+      {"date": "2026-11-25", "kind": "deadline"},
+      {"date": "2026-11-30", "kind": "deadline"},
+      {"date": "2026-12-14", "kind": "event"},
+      {"date": "2026-12-08", "kind": "info"}
+    ]
+  },
+  {
+    "name": "hackathon_flyer",
+    "text": "CODEFEST 2026 - 24 HOUR HACKATHON\nTeams of 2-4. Prizes worth Rs. 1,00,000!\nRegistrations close: Nov 22\nHackathon: Dec 5 - Dec 6, 2026\nVenue: Innovation Lab\nShortlist announced Nov 25, 2026",
+    "gold": [
+      {"date": "2026-11-22", "kind": "deadline"},
+      {"date": "2026-12-05", "kind": "event"},
+      {"date": "2026-11-25", "kind": "info"}
+    ]
+  },
+  {
+    "name": "internship_offer_letter",
+    "text": "Dear Priya,\n\nWe are pleased to offer you a Software Engineering Internship. Please sign and return this letter by 15th November 2026 to confirm acceptance. Your internship will begin on 4th January 2027 and run for six months. Orientation is scheduled for 28 December 2026.",
+    "gold": [
+      {"date": "2026-11-15", "kind": "deadline"},
+      {"date": "2027-01-04", "kind": "event"},
+      {"date": "2026-12-28", "kind": "event"}
+    ]
+  },
+  {
+    "name": "no_dates_notice",
+    "text": "NOTICE\nAll students are requested to maintain silence in the library and keep their ID cards visible at all times. Phone: 040-2345678. Ref No. 2026/LIB/45.",
+    "gold": []
+  }
+]

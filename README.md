@@ -85,6 +85,22 @@ Open http://localhost:3000
 
 ---
 
+## How document understanding works
+
+Uploaded notices go through OCR, then an **LLM reads the text and returns structured JSON**
+(what each date means: deadline, event, issue date or info, plus the exact sentence it came from).
+Nothing the model says is trusted blindly. Every item is checked against the source text:
+
+- the quoted evidence must really appear in the document,
+- the date must be valid and actually written in the document,
+- duplicates are merged, past dates get no task, and low-confidence items are flagged for review.
+
+If the LLM is unavailable or rate limited, the service falls back to the built-in
+TF-IDF + logistic regression pipeline. Quality is measured on unseen documents with
+`python -m eval.run_eval` (see `ai-service/eval/`). Tests: `python -m unittest tests.test_llm_extractor`.
+
+---
+
 ## Auth & email
 
 - Register / login / reset-password work end-to-end
