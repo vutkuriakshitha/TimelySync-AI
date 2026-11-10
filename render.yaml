@@ -49,7 +49,7 @@ services:
           type: web
           envVarKey: AI_INTERNAL_API_KEY
       - key: AI_SERVICE_URL
-        value: https://timelysync-ai.onrender.com
+        value: https://timelysync-ai-hror.onrender.com
       - key: FRONTEND_URL
         sync: false
       - key: CORS_ALLOWED_ORIGINS
@@ -84,6 +84,6 @@ services:
     startCommand: npx serve -s build -l $PORT
     envVars:
       - key: REACT_APP_API_URL
-        value: https://timelysync-api.onrender.com/api
+        value: https://timelysync-api-hror.onrender.com/api
       - key: NODE_VERSION
         value: "20"
